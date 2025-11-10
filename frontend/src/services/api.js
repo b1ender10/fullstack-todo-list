@@ -1,0 +1,59 @@
+// API базовый URL
+const API_URL = 'http://localhost:3000/api/todos'
+
+// Вспомогательная функция для обработки ответов
+async function handleResponse(response) {
+  const result = await response.json()
+  
+  if (!result.success) {
+    throw new Error(result.message || 'Ошибка при выполнении запроса')
+  }
+  
+  return result.data
+}
+
+// Получить все задачи
+export async function getAllTodos(filters) {
+  const filterWithoutUndefined = Object.fromEntries(Object.entries(filters).filter(([key, value]) => value !== undefined))
+  const response = await fetch(API_URL + '?' + new URLSearchParams(filterWithoutUndefined).toString())
+  return handleResponse(response)
+}
+
+// Получить задачу по ID
+export async function getTodoById(id) {
+  const response = await fetch(`${API_URL}/${id}`)
+  return handleResponse(response)
+}
+
+// Создать новую задачу
+export async function createTodo(data) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+  return handleResponse(response)
+}
+
+// Обновить задачу
+export async function updateTodo(id, data) {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+  return handleResponse(response)
+}
+
+// Удалить задачу
+export async function deleteTodo(id) {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'DELETE'
+  })
+  return handleResponse(response)
+}
+
