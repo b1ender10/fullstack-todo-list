@@ -4,12 +4,23 @@ import { Todo } from '../models/Todo.js';
 
 // GET /api/todos - получить все задачи
 export const getAllTodos = async (req, res, next) => {
-  const { completed, priority } = req.query;
+  const { completed, priority, page, limit } = req.query;
   try {
-    const todos = await Todo.getAll({ completed, priority });
+    const result = await Todo.getAll({ completed, priority, page, limit });
+    
+    // Если результат - массив (пагинация не запрашивалась)
+    if (Array.isArray(result)) {
+      return res.json({
+        success: true,
+        data: result
+      });
+    }
+    
+    // Если результат - объект с data и pagination
     res.json({
       success: true,
-      data: todos
+      data: result.data,
+      pagination: result.pagination
     });
   } catch (error) {
     next(error);

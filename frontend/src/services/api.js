@@ -9,14 +9,20 @@ async function handleResponse(response) {
     throw new Error(result.message || 'Ошибка при выполнении запроса')
   }
   
-  return result.data
+  return result
 }
 
 // Получить все задачи
 export async function getAllTodos(filters) {
   const filterWithoutUndefined = Object.fromEntries(Object.entries(filters).filter(([key, value]) => value !== undefined))
   const response = await fetch(API_URL + '?' + new URLSearchParams(filterWithoutUndefined).toString())
-  return handleResponse(response)
+  const result = await handleResponse(response)
+  
+  // Если есть pagination, возвращаем объект, иначе просто data (массив)
+  if (result.pagination) {
+    return result
+  }
+  return result.data
 }
 
 // Получить задачу по ID

@@ -8,7 +8,6 @@ export class Todo {
     const values = [];
 
     if (filters.completed !== undefined) {
-      console.log(filters.completed);
       conditions.push('completed = ?');
       const completedValue =
         filters.completed === true ||
@@ -25,13 +24,51 @@ export class Todo {
       values.push(Number(filters.priority));
     }
 
+    const paginationConditions = [];
+    const paginationValues = [];
+    const hasPagination = filters.page !== undefined && filters.limit !== undefined;
+
+    if (hasPagination) {
+      // Валидация: page и limit должны быть минимум 1
+      const page = Math.max(1, Number(filters.page) || 1);
+      const limit = Math.max(1, Number(filters.limit) || 10);
+      
+      paginationConditions.push('LIMIT ?');
+      paginationConditions.push('OFFSET ?');
+      paginationValues.push(limit);
+      paginationValues.push((page - 1) * limit);
+    }
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const query = `SELECT * FROM todos ${whereClause} ORDER BY created_at DESC`;
-    const todos = await db.all(query, values);
-    return todos.map(todo => ({
+    const paginationClause = paginationConditions.length > 0 ? ` ${paginationConditions.join(' ')}` : '';
+    const query = `SELECT * FROM todos ${whereClause} ORDER BY created_at DESC ${paginationClause}`;
+    const todos = await db.all(query, [...values, ...paginationValues]);
+    
+    const todosResponse = todos.map(todo => ({
       ...todo,
       completed: Boolean(todo.completed) // SQLite хранит boolean как 0/1
     }));
+
+    // Если пагинация не запрашивалась, возвращаем просто массив
+    if (!hasPagination) {
+      return todosResponse;
+    }
+
+    // Если пагинация запрашивалась, возвращаем объект с data и pagination
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 10);
+    const queryTotalCount = `SELECT COUNT(*) as count FROM todos ${whereClause}`;
+    const totalCount = await db.get(queryTotalCount, values);
+
+    return {
+      data: todosResponse,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: totalCount.count,
+        totalPages: Math.ceil(totalCount.count / limit)
+      }
+    }
   }
 
   // Получить задачу по ID
