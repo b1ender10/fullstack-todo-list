@@ -1,4 +1,5 @@
 import { Todo } from '../models/Todo.js';
+import { config } from '../config/constants.js';
 
 // Контроллер - обрабатывает HTTP запросы и вызывает методы модели
 
@@ -34,9 +35,9 @@ export const getTodoById = async (req, res, next) => {
     const todo = await Todo.getById(id);
 
     if (!todo) {
-      return res.status(404).json({
+      return res.status(config.httpStatus.NOT_FOUND).json({
         success: false,
-        message: 'Задача не найдена'
+        message: config.messages.todo.notFound
       });
     }
 
@@ -55,10 +56,10 @@ export const createTodo = async (req, res, next) => {
     const { title, description, priority } = req.body;
     const todo = await Todo.create({ title, description, priority });
 
-    res.status(201).json({
+    res.status(config.httpStatus.CREATED).json({
       success: true,
       data: todo,
-      message: 'Задача успешно создана'
+      message: config.messages.todo.created
     });
   } catch (error) {
     next(error);
@@ -84,7 +85,7 @@ export const updateTodo = async (req, res, next) => {
     res.json({
       success: true,
       data: todo,
-      message: 'Задача успешно обновлена'
+      message: config.messages.todo.updated
     });
   } catch (error) {
     next(error);
@@ -98,16 +99,16 @@ export const deleteTodo = async (req, res, next) => {
     const todo = await Todo.delete(id);
 
     if (!todo) {
-      return res.status(404).json({
+      return res.status(config.httpStatus.NOT_FOUND).json({
         success: false,
-        message: 'Задача не найдена'
+        message: config.messages.todo.notFound
       });
     }
 
     res.json({
       success: true,
       data: todo,
-      message: 'Задача успешно удалена'
+      message: config.messages.todo.deleted
     });
   } catch (error) {
     next(error);

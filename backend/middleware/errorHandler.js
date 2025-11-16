@@ -1,38 +1,40 @@
+import { config } from '../config/constants.js';
+
 // Middleware для обработки ошибок
 export const errorHandler = (err, req, res, next) => {
   console.error('Ошибка:', err);
 
   // Ошибка базы данных
   if (err.code && err.code.startsWith('SQLITE_')) {
-    return res.status(500).json({
+    return res.status(config.httpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Ошибка базы данных',
+      message: config.messages.errors.database,
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 
   // Ошибка валидации (если не обработана ранее)
   if (err.name === 'ValidationError') {
-    return res.status(400).json({
+    return res.status(config.httpStatus.BAD_REQUEST).json({
       success: false,
-      message: 'Ошибка валидации',
+      message: config.messages.errors.validation,
       error: err.message
     });
   }
 
   // Общая ошибка сервера
-  res.status(err.status || 500).json({
+  res.status(err.status || config.httpStatus.INTERNAL_SERVER_ERROR).json({
     success: false,
-    message: err.message || 'Внутренняя ошибка сервера',
+    message: err.message || config.messages.errors.internal,
     error: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 };
 
 // Middleware для обработки 404
 export const notFoundHandler = (req, res) => {
-  res.status(404).json({
+  res.status(config.httpStatus.NOT_FOUND).json({
     success: false,
-    message: `Маршрут ${req.method} ${req.path} не найден`
+    message: config.messages.errors.notFound(req.method, req.path)
   });
 };
 

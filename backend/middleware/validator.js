@@ -1,12 +1,13 @@
 import { body, param, validationResult } from 'express-validator';
+import { config } from '../config/constants.js';
 
 // Middleware для обработки ошибок валидации
 export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    return res.status(config.httpStatus.BAD_REQUEST).json({
       success: false,
-      message: 'Ошибка валидации',
+      message: config.messages.validation.general,
       errors: errors.array()
     });
   }
@@ -18,14 +19,14 @@ export const validateCreateTodo = [
   body('title')
     .trim()
     .notEmpty()
-    .withMessage('Название задачи обязательно')
-    .isLength({ min: 1, max: 200 })
-    .withMessage('Название должно быть от 1 до 200 символов'),
+    .withMessage(config.messages.validation.titleRequired)
+    .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
+    .withMessage(config.messages.validation.titleLength),
   body('description')
     .optional()
     .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Описание не должно превышать 1000 символов'),
+    .isLength({ max: config.descriptionMaxLength })
+    .withMessage(config.messages.validation.descriptionLength),
   handleValidationErrors
 ];
 
@@ -33,27 +34,27 @@ export const validateCreateTodo = [
 export const validateUpdateTodo = [
   param('id')
     .isInt({ min: 1 })
-    .withMessage('ID должен быть положительным числом'),
+    .withMessage(config.messages.validation.idInvalid),
   body('title')
     .optional()
     .trim()
     .notEmpty()
-    .withMessage('Название не может быть пустым')
-    .isLength({ min: 1, max: 200 })
-    .withMessage('Название должно быть от 1 до 200 символов'),
+    .withMessage(config.messages.validation.titleEmpty)
+    .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
+    .withMessage(config.messages.validation.titleLength),
   body('description')
     .optional()
     .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Описание не должно превышать 1000 символов'),
+    .isLength({ max: config.descriptionMaxLength })
+    .withMessage(config.messages.validation.descriptionLength),
   body('completed')
     .optional()
     .isBoolean()
-    .withMessage('completed должен быть boolean'),
+    .withMessage(config.messages.validation.completedInvalid),
   body('priority')
     .optional()
-    .isInt({ min: 1, max: 3 })
-    .withMessage('Приоритет должен быть числом от 1 до 3'),
+    .isInt({ min: config.priorityMin, max: config.priorityMax })
+    .withMessage(config.messages.validation.priorityInvalid),
   handleValidationErrors
 ];
 
@@ -61,7 +62,7 @@ export const validateUpdateTodo = [
 export const validateId = [
   param('id')
     .isInt({ min: 1 })
-    .withMessage('ID должен быть положительным числом'),
+    .withMessage(config.messages.validation.idInvalid),
   handleValidationErrors
 ];
 

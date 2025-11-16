@@ -1,4 +1,5 @@
 import { db } from '../config/database.js';
+import { config } from '../config/constants.js';
 
 // Модель Todo - содержит методы для работы с данными
 export class Todo {
@@ -30,8 +31,8 @@ export class Todo {
 
     if (hasPagination) {
       // Валидация: page и limit должны быть минимум 1
-      const page = Math.max(1, Number(filters.page) || 1);
-      const limit = Math.max(1, Number(filters.limit) || 10);
+      const page = Math.max(1, Number(filters.page) || config.defaultPage);
+      const limit = Math.max(1, Number(filters.limit) || config.defaultLimit);
       
       paginationConditions.push('LIMIT ?');
       paginationConditions.push('OFFSET ?');
@@ -55,8 +56,8 @@ export class Todo {
     }
 
     // Если пагинация запрашивалась, возвращаем объект с data и pagination
-    const page = Math.max(1, Number(filters.page) || 1);
-    const limit = Math.max(1, Number(filters.limit) || 10);
+    const page = Math.max(1, Number(filters.page) || config.defaultPage);
+    const limit = Math.max(1, Number(filters.limit) || config.defaultLimit);
     const queryTotalCount = `SELECT COUNT(*) as count FROM todos ${whereClause}`;
     const totalCount = await db.get(queryTotalCount, values);
 
@@ -86,7 +87,7 @@ export class Todo {
     const normalizedPriority =
       priority !== undefined && priority !== null && priority !== ''
         ? Number(priority)
-        : 2;
+        : config.defaultPriority;
     const result = await db.run(
       'INSERT INTO todos (title, description, priority) VALUES (?, ?, ?)',
       [title, description, normalizedPriority]
@@ -116,7 +117,7 @@ export class Todo {
       updates.push('priority = ?');
       values.push(
         priority === null || priority === ''
-          ? 2
+          ? config.defaultPriority
           : Number(priority)
       );
     }

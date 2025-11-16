@@ -3,9 +3,10 @@ import cors from 'cors';
 import { initDatabase } from './config/database.js';
 import todoRoutes from './routes/todoRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { config } from './config/constants.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || config.defaultPort;
 
 // Middleware
 app.use(cors()); // Разрешаем запросы с фронтенда
@@ -19,11 +20,11 @@ app.use((req, res, next) => {
 });
 
 // Роуты
-app.use('/api/todos', todoRoutes);
+app.use(config.apiBasePath, todoRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Сервер работает' });
+app.get(config.healthCheckPath, (req, res) => {
+  res.json({ status: 'OK', message: config.messages.server.running });
 });
 
 // Обработка 404
@@ -41,7 +42,7 @@ const startServer = async () => {
     // Запускаем сервер
     app.listen(PORT, () => {
       console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
-      console.log(`📝 API доступен по адресу http://localhost:${PORT}/api/todos`);
+      console.log(`📝 API доступен по адресу http://localhost:${PORT}${config.apiBasePath}`);
     });
   } catch (error) {
     console.error('❌ Ошибка при запуске сервера:', error);
