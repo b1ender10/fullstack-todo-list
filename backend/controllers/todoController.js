@@ -1,5 +1,5 @@
-import { Todo } from '../models/Todo.js';
 import { config } from '../config/constants.js';
+import TodoService from '../services/todoService.js';
 
 // Контроллер - обрабатывает HTTP запросы и вызывает методы модели
 
@@ -7,21 +7,13 @@ import { config } from '../config/constants.js';
 export const getAllTodos = async (req, res, next) => {
   const { completed, priority, page, limit } = req.query;
   try {
-    const result = await Todo.getAll({ completed, priority, page, limit });
+    const result = await TodoService.getAllTodos({ completed, priority, page, limit });
     
-    // Если результат - массив (пагинация не запрашивалась)
-    if (Array.isArray(result)) {
-      return res.json({
-        success: true,
-        data: result
-      });
-    }
-    
-    // Если результат - объект с data и pagination
+    // Service всегда возвращает единый формат { data, pagination }
     res.json({
       success: true,
       data: result.data,
-      pagination: result.pagination
+      ...(result.pagination && { pagination: result.pagination })
     });
   } catch (error) {
     next(error);
@@ -32,20 +24,22 @@ export const getAllTodos = async (req, res, next) => {
 export const getTodoById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const todo = await Todo.getById(id);
+    const todo = await TodoService.getTodoById(id);
 
-    if (!todo) {
-      return res.status(config.httpStatus.NOT_FOUND).json({
-        success: false,
-        message: config.messages.todo.notFound
-      });
-    }
-
+    // Service выбрасывает ошибку, если задача не найдена
+    // Контроллер просто передает результат
     res.json({
       success: true,
       data: todo
     });
   } catch (error) {
+    // Обработка ошибки "Todo not found" - возвращаем 404
+    if (error.message === 'Todo not found') {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: config.messages.todo.notFound
+      });
+    }
     next(error);
   }
 };
@@ -54,7 +48,7 @@ export const getTodoById = async (req, res, next) => {
 export const createTodo = async (req, res, next) => {
   try {
     const { title, description, priority } = req.body;
-    const todo = await Todo.create({ title, description, priority });
+    const todo = await TodoService.createTodo({ title, description, priority });
 
     res.status(config.httpStatus.CREATED).json({
       success: true,
@@ -72,15 +66,8 @@ export const updateTodo = async (req, res, next) => {
     const { id } = req.params;
     const { title, description, completed, priority } = req.body;
 
-    const existingTodo = await Todo.getById(id);
-    if (!existingTodo) {
-      return res.status(404).json({
-        success: false,
-        message: 'Задача не найдена'
-      });
-    }
-
-    const todo = await Todo.update(id, { title, description, completed, priority });
+    // Service проверяет существование задачи и валидирует данные
+    const todo = await TodoService.updateTodo(id, { title, description, completed, priority });
 
     res.json({
       success: true,
@@ -88,6 +75,13 @@ export const updateTodo = async (req, res, next) => {
       message: config.messages.todo.updated
     });
   } catch (error) {
+    // Обработка ошибки "Todo not found" - возвращаем 404
+    if (error.message === 'Todo not found') {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: config.messages.todo.notFound
+      });
+    }
     next(error);
   }
 };
@@ -96,14 +90,9 @@ export const updateTodo = async (req, res, next) => {
 export const deleteTodo = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const todo = await Todo.delete(id);
-
-    if (!todo) {
-      return res.status(config.httpStatus.NOT_FOUND).json({
-        success: false,
-        message: config.messages.todo.notFound
-      });
-    }
+    
+    // Service проверяет существование задачи и валидирует ID
+    const todo = await TodoService.deleteTodo(id);
 
     res.json({
       success: true,
@@ -111,6 +100,13 @@ export const deleteTodo = async (req, res, next) => {
       message: config.messages.todo.deleted
     });
   } catch (error) {
+    // Обработка ошибки "Todo not found" - возвращаем 404
+    if (error.message === 'Todo not found') {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: config.messages.todo.notFound
+      });
+    }
     next(error);
   }
 };
