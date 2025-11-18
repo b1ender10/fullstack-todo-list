@@ -1,8 +1,13 @@
 import { config } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 // Middleware для обработки ошибок
 export const errorHandler = (err, req, res, next) => {
-  console.error('Ошибка:', err);
+  logger.error('Ошибка обработана errorHandler', {
+    message: err.message,
+    stack: err.stack,
+    code: err.code
+  });
 
   // Ошибка базы данных
   if (err.code && err.code.startsWith('SQLITE_')) {

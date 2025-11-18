@@ -1,5 +1,6 @@
 import { Todo } from '../models/Todo.js';
 import { config } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 class TodoService {
 
@@ -167,6 +168,8 @@ class TodoService {
             priority: normalizedPriority 
         });
         
+        logger.info('Todo created', { id: todo.id, title: todo.title, priority: todo.priority });
+        
         return todo;
     }
 
@@ -259,11 +262,8 @@ class TodoService {
         // Вызов модели
         const todo = await Todo.update(normalizedId, { updates, values });
         
-        // Проверка результата (на случай, если задача была удалена во время обновления)
-        if (!todo) {
-            throw new Error('Todo not found');
-        }
-        
+        logger.info('Todo updated', { id: todo.id, title: todo.title });
+
         return todo;
     }
 
@@ -277,10 +277,7 @@ class TodoService {
         // Вызов модели (модель сама проверяет существование и возвращает null, если не найдено)
         const todo = await Todo.delete(normalizedId);
         
-        // Бизнес-логика: если задача не найдена, выбрасываем ошибку
-        if (!todo) {
-            throw new Error('Todo not found');
-        }
+        logger.info('Todo deleted', { id: todo.id, title: todo.title });
         
         return todo;
     }

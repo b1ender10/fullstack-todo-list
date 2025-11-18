@@ -4,6 +4,7 @@ import { initDatabase } from './config/database.js';
 import todoRoutes from './routes/todoRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { config } from './config/constants.js';
+import logger from './utils/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || config.defaultPort;
@@ -13,9 +14,18 @@ app.use(cors()); // Разрешаем запросы с фронтенда
 app.use(express.json()); // Парсим JSON в теле запроса
 app.use(express.urlencoded({ extended: true })); // Парсим URL-encoded данные
 
-// Логирование запросов (простое)
+// Логирование HTTP запросов (пример использования winston)
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const startedAt = process.hrtime.bigint();
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    logger.info('HTTP request', {
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      duration: `${durationMs.toFixed(2)}ms`
+    });
+  });
   next();
 });
 
@@ -41,11 +51,11 @@ const startServer = async () => {
 
     // Запускаем сервер
     app.listen(PORT, () => {
-      console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
-      console.log(`📝 API доступен по адресу http://localhost:${PORT}${config.apiBasePath}`);
+      logger.info(`🚀 Сервер запущен на http://localhost:${PORT}`);
+      logger.info(`📝 API доступен по адресу http://localhost:${PORT}${config.apiBasePath}`);
     });
   } catch (error) {
-    console.error('❌ Ошибка при запуске сервера:', error);
+    logger.error('❌ Ошибка при запуске сервера', error);
     process.exit(1);
   }
 };
