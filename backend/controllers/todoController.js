@@ -48,6 +48,30 @@ export const getTodoById = async (req, res, next) => {
 export const createTodo = async (req, res, next) => {
   try {
     const { title, description, priority } = req.body;
+
+    const onlyLettersAndNumbersAndSpaces = /^[a-zA-Z0-9\s]+$/;
+    const onlyNumbers = /^[0-9]+$/;
+    if (!onlyLettersAndNumbersAndSpaces.test(title)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
+
+    if (!onlyLettersAndNumbersAndSpaces.test(description)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
+
+    if (!onlyNumbers.test(priority)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
+    
     const todo = await TodoService.createTodo({ title, description, priority });
 
     res.status(config.httpStatus.CREATED).json({
@@ -65,6 +89,29 @@ export const updateTodo = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { title, description, completed, priority } = req.body;
+
+    const onlyLettersAndNumbersAndSpaces = /^[a-zA-Z0-9\s]+$/;
+    const onlyNumbers = /^[0-9]+$/;
+    if (!onlyLettersAndNumbersAndSpaces.test(title)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
+
+    if (!onlyLettersAndNumbersAndSpaces.test(description)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
+
+    if (!onlyNumbers.test(priority)) {
+      return res.status(config.httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: config.messages.validation.invalidType
+      });
+    }
 
     // Service проверяет существование задачи и валидирует данные
     const todo = await TodoService.updateTodo(id, { title, description, completed, priority });

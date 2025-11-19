@@ -39,10 +39,10 @@ const initDatabase = async () => {
     await db.run(`
       CREATE TABLE IF NOT EXISTS todos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        description TEXT,
-        completed INTEGER DEFAULT 0,
-        priority INTEGER DEFAULT 2,
+        title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 200),
+        description TEXT CHECK(length(description) <= 1000),
+        completed INTEGER DEFAULT 0 CHECK(completed IN (0, 1)),
+        priority INTEGER DEFAULT 2 CHECK(priority BETWEEN 1 AND 3),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )

@@ -48,7 +48,8 @@ export const config = {
       titleEmpty: 'Название не может быть пустым',
       completedInvalid: 'completed должен быть boolean',
       priorityInvalid: 'Приоритет должен быть числом от 1 до 3',
-      general: 'Ошибка валидации'
+      general: 'Ошибка валидации',
+      invalidType: 'Неверный тип',
     },
     errors: {
       database: 'Ошибка базы данных',

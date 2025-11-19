@@ -21,12 +21,20 @@ export const validateCreateTodo = [
     .notEmpty()
     .withMessage(config.messages.validation.titleRequired)
     .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
-    .withMessage(config.messages.validation.titleLength),
+    .withMessage(config.messages.validation.titleLength)
+    .isString()
+    .withMessage(config.messages.validation.invalidType),
   body('description')
     .optional()
     .trim()
     .isLength({ max: config.descriptionMaxLength })
-    .withMessage(config.messages.validation.descriptionLength),
+    .withMessage(config.messages.validation.descriptionLength)
+    .isString()
+    .withMessage(config.messages.validation.invalidType),
+  body('priority')
+    .optional()
+    .isInt({ min: config.priorityMin, max: config.priorityMax })
+    .withMessage(config.messages.validation.priorityInvalid),
   handleValidationErrors
 ];
 
@@ -41,7 +49,9 @@ export const validateUpdateTodo = [
     .notEmpty()
     .withMessage(config.messages.validation.titleEmpty)
     .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
-    .withMessage(config.messages.validation.titleLength),
+    .withMessage(config.messages.validation.titleLength)
+    .isString()
+    .withMessage(config.messages.validation.invalidType),
   body('description')
     .optional()
     .trim()
@@ -50,7 +60,9 @@ export const validateUpdateTodo = [
   body('completed')
     .optional()
     .isBoolean()
-    .withMessage(config.messages.validation.completedInvalid),
+    .withMessage(config.messages.validation.completedInvalid)
+    .isString()
+    .withMessage(config.messages.validation.invalidType),
   body('priority')
     .optional()
     .isInt({ min: config.priorityMin, max: config.priorityMax })

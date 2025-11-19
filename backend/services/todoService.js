@@ -122,16 +122,13 @@ class TodoService {
     }
 
     static async createTodo({ title, description, priority }) {
-        // Валидация и нормализация title
-        if (!title || typeof title !== 'string') {
-            throw new Error('Title is required and must be a string');
+        if (typeof title !== 'string') {
+            throw new Error('Title must be a string');
         }
-        
         const trimmedTitle = title.trim();
         if (trimmedTitle === '') {
             throw new Error('Title cannot be empty');
         }
-        
         if (trimmedTitle.length < config.titleMinLength || trimmedTitle.length > config.titleMaxLength) {
             throw new Error(`Title must be between ${config.titleMinLength} and ${config.titleMaxLength} characters`);
         }
@@ -142,7 +139,6 @@ class TodoService {
             if (typeof description !== 'string') {
                 throw new Error('Description must be a string');
             }
-            
             const trimmedDescription = description.trim();
             if (trimmedDescription.length > config.descriptionMaxLength) {
                 throw new Error(`Description must not exceed ${config.descriptionMaxLength} characters`);
@@ -154,9 +150,11 @@ class TodoService {
         let normalizedPriority = config.defaultPriority;
         if (priority !== undefined && priority !== null && priority !== '') {
             normalizedPriority = Number(priority);
-            
-            // Валидация диапазона приоритета
-            if (isNaN(normalizedPriority) || normalizedPriority < config.priorityMin || normalizedPriority > config.priorityMax) {
+            if (
+                !Number.isInteger(normalizedPriority) ||
+                normalizedPriority < config.priorityMin ||
+                normalizedPriority > config.priorityMax
+            ) {
                 throw new Error(`Priority must be a number between ${config.priorityMin} and ${config.priorityMax}`);
             }
         }
@@ -191,24 +189,26 @@ class TodoService {
 
         // Валидация и нормализация title
         if (title !== undefined) {
-            const trimmedTitle = typeof title === 'string' ? title.trim() : title;
-            
+            if (typeof title !== 'string') {
+                throw new Error('Title must be a string');
+            }
+            const trimmedTitle = title.trim();
             if (trimmedTitle === '') {
                 throw new Error('Title cannot be empty');
             }
-            
             if (trimmedTitle.length < config.titleMinLength || trimmedTitle.length > config.titleMaxLength) {
                 throw new Error(`Title must be between ${config.titleMinLength} and ${config.titleMaxLength} characters`);
             }
-            
             updates.push('title = ?');
             values.push(trimmedTitle);
         }
 
         // Валидация и нормализация description
         if (description !== undefined) {
-            const trimmedDescription = typeof description === 'string' ? description.trim() : description;
-            
+            if (typeof description !== 'string') {
+                throw new Error('Description must be a string');
+            }
+            const trimmedDescription = description.trim();
             if (trimmedDescription.length > config.descriptionMaxLength) {
                 throw new Error(`Description must not exceed ${config.descriptionMaxLength} characters`);
             }
@@ -225,7 +225,15 @@ class TodoService {
                 completed === 1 ||
                 completed === '1'
                 ? 1
-                : 0;
+                : completed === false ||
+                  completed === 'false' ||
+                  completed === 0 ||
+                  completed === '0'
+                ? 0
+                : null;
+            if (normalizedCompleted === null) {
+                throw new Error('completed must be a boolean value');
+            }
             
             updates.push('completed = ?');
             values.push(normalizedCompleted);
@@ -239,9 +247,11 @@ class TodoService {
                 normalizedPriority = config.defaultPriority;
             } else {
                 normalizedPriority = Number(priority);
-                
-                // Валидация диапазона приоритета
-                if (isNaN(normalizedPriority) || normalizedPriority < config.priorityMin || normalizedPriority > config.priorityMax) {
+                if (
+                    !Number.isInteger(normalizedPriority) ||
+                    normalizedPriority < config.priorityMin ||
+                    normalizedPriority > config.priorityMax
+                ) {
                     throw new Error(`Priority must be a number between ${config.priorityMin} and ${config.priorityMax}`);
                 }
             }
@@ -276,6 +286,9 @@ class TodoService {
 
         // Вызов модели (модель сама проверяет существование и возвращает null, если не найдено)
         const todo = await Todo.delete(normalizedId);
+        if (!todo) {
+            throw new Error('Todo not found');
+        }
         
         logger.info('Todo deleted', { id: todo.id, title: todo.title });
         
