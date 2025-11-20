@@ -29,6 +29,7 @@ export const config = {
     CREATED: 201,
     BAD_REQUEST: 400,
     NOT_FOUND: 404,
+    TOO_MANY_REQUESTS: 429,
     INTERNAL_SERVER_ERROR: 500
   },
   
@@ -55,6 +56,7 @@ export const config = {
       database: 'Ошибка базы данных',
       validation: 'Ошибка валидации',
       internal: 'Внутренняя ошибка сервера',
+      rateLimit: 'Слишком много запросов. Попробуйте позже.',
       notFound: (method, path) => `Маршрут ${method} ${path} не найден`
     },
     server: {

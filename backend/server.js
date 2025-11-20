@@ -5,9 +5,26 @@ import todoRoutes from './routes/todoRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { config } from './config/constants.js';
 import logger from './utils/logger.js';
+import { rateLimit } from 'express-rate-limit'
 
 const app = express();
 const PORT = process.env.PORT || config.defaultPort;
+
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  limit: 100, // 100 запросов за окно
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(config.httpStatus.TOO_MANY_REQUESTS).json({
+      success: false,
+      message: config.messages.errors.rateLimit
+    });
+  }
+});
+
+app.use(limiter);
 
 // Middleware
 app.use(cors()); // Разрешаем запросы с фронтенда
