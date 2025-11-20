@@ -17,24 +17,27 @@ export const handleValidationErrors = (req, res, next) => {
 // Валидация для создания задачи
 export const validateCreateTodo = [
   body('title')
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
     .trim()
     .notEmpty()
     .withMessage(config.messages.validation.titleRequired)
     .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
     .withMessage(config.messages.validation.titleLength)
-    .isString()
-    .withMessage(config.messages.validation.invalidType),
+    .escape(),
   body('description')
     .optional()
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
     .trim()
     .isLength({ max: config.descriptionMaxLength })
     .withMessage(config.messages.validation.descriptionLength)
-    .isString()
-    .withMessage(config.messages.validation.invalidType),
+    .escape(),
   body('priority')
     .optional()
     .isInt({ min: config.priorityMin, max: config.priorityMax })
-    .withMessage(config.messages.validation.priorityInvalid),
+    .withMessage(config.messages.validation.priorityInvalid)
+    .toInt(),
   handleValidationErrors
 ];
 
@@ -45,28 +48,32 @@ export const validateUpdateTodo = [
     .withMessage(config.messages.validation.idInvalid),
   body('title')
     .optional()
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
     .trim()
     .notEmpty()
     .withMessage(config.messages.validation.titleEmpty)
     .isLength({ min: config.titleMinLength, max: config.titleMaxLength })
     .withMessage(config.messages.validation.titleLength)
-    .isString()
-    .withMessage(config.messages.validation.invalidType),
+    .escape(),
   body('description')
     .optional()
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
     .trim()
     .isLength({ max: config.descriptionMaxLength })
-    .withMessage(config.messages.validation.descriptionLength),
+    .withMessage(config.messages.validation.descriptionLength)
+    .escape(),
   body('completed')
     .optional()
     .isBoolean()
     .withMessage(config.messages.validation.completedInvalid)
-    .isString()
-    .withMessage(config.messages.validation.invalidType),
+    .toBoolean(),
   body('priority')
     .optional()
     .isInt({ min: config.priorityMin, max: config.priorityMax })
-    .withMessage(config.messages.validation.priorityInvalid),
+    .withMessage(config.messages.validation.priorityInvalid)
+    .toInt(),
   handleValidationErrors
 ];
 
