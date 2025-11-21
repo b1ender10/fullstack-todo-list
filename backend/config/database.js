@@ -47,6 +47,18 @@ const initDatabase = async () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    
+    // Создаем индексы для оптимизации запросов (если их еще нет)
+    // Для существующих БД используй миграцию: node backend/migrations/002_add_indexes.js up
+    try {
+      await db.run('CREATE INDEX IF NOT EXISTS idx_completed ON todos(completed)');
+      await db.run('CREATE INDEX IF NOT EXISTS idx_priority ON todos(priority)');
+      await db.run('CREATE INDEX IF NOT EXISTS idx_created_at ON todos(created_at)');
+    } catch (indexError) {
+      // Игнорируем ошибки создания индексов (они могут уже существовать)
+      // Это нормально, если индексы уже созданы через миграцию
+    }
+    
     console.log('✅ База данных инициализирована');
   } catch (error) {
     console.error('❌ Ошибка при инициализации БД:', error);
