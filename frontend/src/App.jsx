@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import TodoForm from './components/TodoForm'
 import TodoList from './components/TodoList'
-import { getAllTodos } from './services/api'
+import { getAllTodos, getAllDeletedTodos, batchDeleteTodos, batchSoftDeleteTodos, batchRestoreTodos } from './services/api'
 import './styles.css'
 
 function App() {
@@ -16,11 +16,27 @@ function App() {
   const [limit] = useState(3)
   const [hasMore, setHasMore] = useState(false)
   const [pagination, setPagination] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [currentPage, setCurrentPage] = useState('main')
+  
+  // Состояния для страницы удаленных задач
+  const [deletedTodos, setDeletedTodos] = useState([])
+  const [deletedLoading, setDeletedLoading] = useState(false)
+  const [deletedError, setDeletedError] = useState(null)
+  const [deletedPage, setDeletedPage] = useState(1)
+  const deletedPageRef = useRef(1)
+  const [deletedHasMore, setDeletedHasMore] = useState(false)
+  const [deletedPagination, setDeletedPagination] = useState(null)
+  const [deletedSelectedIds, setDeletedSelectedIds] = useState(new Set())
 
   // Загрузка задач при монтировании компонента
   useEffect(() => {
-    loadTodos()
-  }, [])
+    if (currentPage === 'main') {
+      loadTodos()
+    } else {
+      loadDeletedTodos()
+    }
+  }, [currentPage])
 
   const loadTodos = useCallback(async (overrides = {}, append = false) => {
     const nextPriority = overrides.priority ?? priorityFilter
@@ -53,11 +69,12 @@ function App() {
       if (result.pagination) {
         // Объект с data и pagination
         const todosData = result.data
-        if (append) {
-          setTodos(prev => [...prev, ...todosData])
-        } else {
-          setTodos(todosData)
-        }
+      if (append) {
+        setTodos(prev => [...prev, ...todosData])
+      } else {
+        setTodos(todosData)
+        setSelectedIds(new Set())
+      }
         setPagination(result.pagination)
         // Проверяем, есть ли еще страницы
         setHasMore(result.pagination.page < result.pagination.totalPages)
@@ -67,6 +84,7 @@ function App() {
           setTodos(prev => [...prev, ...result])
         } else {
           setTodos(result)
+          setSelectedIds(new Set())
         }
         setPagination(null)
         setHasMore(false)
@@ -98,68 +116,316 @@ function App() {
     setEditingTodo(null)
   }
 
+  const handleSelectTodo = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === todos.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(todos.map(t => t.id)))
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+    
+    const idsArray = Array.from(selectedIds).map(id => Number(id))
+    if (!window.confirm(`Вы уверены, что хотите удалить ${selectedIds.size} задач?`)) {
+      return
+    }
+
+    try {
+      await batchDeleteTodos(idsArray)
+      setSelectedIds(new Set())
+      loadTodos()
+    } catch (err) {
+      alert(`Ошибка: ${err.message}`)
+    }
+  }
+
+  const handleBatchSoftDelete = async () => {
+    if (selectedIds.size === 0) return
+    
+    const idsArray = Array.from(selectedIds).map(id => Number(id))
+    if (!window.confirm(`Вы уверены, что хотите пометить как удаленные ${selectedIds.size} задач?`)) {
+      return
+    }
+
+    try {
+      await batchSoftDeleteTodos(idsArray)
+      setSelectedIds(new Set())
+      loadTodos()
+    } catch (err) {
+      alert(`Ошибка: ${err.message}`)
+    }
+  }
+
+  const loadDeletedTodos = useCallback(async (append = false) => {
+    if (!append) {
+      setDeletedLoading(true)
+    }
+    setDeletedError(null)
+
+    try {
+      const currentPage = append ? deletedPageRef.current + 1 : 1
+      
+      if (append) {
+        deletedPageRef.current = currentPage
+        setDeletedPage(currentPage)
+      } else {
+        deletedPageRef.current = 1
+        setDeletedPage(1)
+      }
+      
+      const result = await getAllDeletedTodos({
+        page: currentPage,
+        limit,
+      })
+      
+      if (result.pagination) {
+        const todosData = result.data
+        if (append) {
+          setDeletedTodos(prev => [...prev, ...todosData])
+        } else {
+          setDeletedTodos(todosData)
+          setDeletedSelectedIds(new Set())
+        }
+        setDeletedPagination(result.pagination)
+        setDeletedHasMore(result.pagination.page < result.pagination.totalPages)
+      } else {
+        if (append) {
+          setDeletedTodos(prev => [...prev, ...result])
+        } else {
+          setDeletedTodos(result)
+          setDeletedSelectedIds(new Set())
+        }
+        setDeletedPagination(null)
+        setDeletedHasMore(false)
+      }
+    } catch (err) {
+      setDeletedError(`Ошибка: ${err.message}`)
+    } finally {
+      setDeletedLoading(false)
+    }
+  }, [limit])
+
+  const handleSelectDeletedTodo = (id) => {
+    setDeletedSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAllDeleted = () => {
+    if (deletedSelectedIds.size === deletedTodos.length) {
+      setDeletedSelectedIds(new Set())
+    } else {
+      setDeletedSelectedIds(new Set(deletedTodos.map(t => t.id)))
+    }
+  }
+
+  const handleBatchRestore = async () => {
+    if (deletedSelectedIds.size === 0) return
+    
+    const idsArray = Array.from(deletedSelectedIds).map(id => Number(id))
+    if (!window.confirm(`Вы уверены, что хотите восстановить ${deletedSelectedIds.size} задач?`)) {
+      return
+    }
+
+    try {
+      await batchRestoreTodos(idsArray)
+      setDeletedSelectedIds(new Set())
+      loadDeletedTodos()
+    } catch (err) {
+      alert(`Ошибка: ${err.message}`)
+    }
+  }
+
   return (
     <div className="container">
       <header>
         <h1>📝 Мои Задачи</h1>
         <p className="subtitle">Простое CRUD приложение</p>
+        <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => setCurrentPage('main')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: currentPage === 'main' ? '#007bff' : '#f0f0f0',
+              color: currentPage === 'main' ? 'white' : 'black',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Основные задачи
+          </button>
+          <button
+            onClick={() => setCurrentPage('deleted')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: currentPage === 'deleted' ? '#007bff' : '#f0f0f0',
+              color: currentPage === 'deleted' ? 'white' : 'black',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Удаленные задачи
+          </button>
+        </div>
       </header>
 
-      <TodoForm
-        editingTodo={editingTodo}
-        onTodoCreated={handleTodoCreated}
-        onTodoUpdated={handleTodoUpdated}
-        onCancel={handleCancelEdit}
-      />
+      {currentPage === 'main' ? (
+        <>
+          <TodoForm
+            editingTodo={editingTodo}
+            onTodoCreated={handleTodoCreated}
+            onTodoUpdated={handleTodoUpdated}
+            onCancel={handleCancelEdit}
+          />
 
-      <div>
-        <select onChange={(e) => {
-          const value = e.target.value
-          setPriorityFilter(value)
-          loadTodos({ priority: value }, false)
-        }}>
-          <option value="">All</option>
-          <option value="1">Low</option>
-          <option value="2">Medium</option>
-          <option value="3">High</option>
-        </select>
+          <div>
+            <select onChange={(e) => {
+              const value = e.target.value
+              setPriorityFilter(value)
+              loadTodos({ priority: value }, false)
+            }}>
+              <option value="">All</option>
+              <option value="1">Low</option>
+              <option value="2">Medium</option>
+              <option value="3">High</option>
+            </select>
 
-        <select onChange={(e) => {
-          const value = e.target.value
-          setCompletedFilter(value)
-          loadTodos({ completed: value }, false)
-        }}>
-          <option value="">All</option>
-          <option value="true">Completed</option>
-          <option value="false">Not Completed</option>
-        </select>
-      </div>
+            <select onChange={(e) => {
+              const value = e.target.value
+              setCompletedFilter(value)
+              loadTodos({ completed: value }, false)
+            }}>
+              <option value="">All</option>
+              <option value="true">Completed</option>
+              <option value="false">Not Completed</option>
+            </select>
+          </div>
 
-      <div className="todos-container">
-        {loading && page === 1 && <div className="loading">Загрузка...</div>}
-        {error && <div className="error">{error}</div>}
-        {!loading && !error && (
-          <>
-            <TodoList
-              todos={todos}
-              onTodoUpdated={loadTodos}
-              onEdit={handleEdit}
-              onDelete={loadTodos}
-            />
-            {hasMore && (
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                <button 
-                  onClick={() => loadTodos({}, true)}
-                  disabled={loading}
-                  style={{ padding: '10px 20px', fontSize: '16px' }}
-                >
-                  {loading ? 'Загрузка...' : 'Загрузить еще'}
-                </button>
-              </div>
+          <div className="todos-container">
+            {loading && page === 1 && <div className="loading">Загрузка...</div>}
+            {error && <div className="error">{error}</div>}
+            {!loading && !error && (
+              <>
+                {todos.length > 0 && (
+                  <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === todos.length && todos.length > 0}
+                      onChange={handleSelectAll}
+                    />
+                    <span>Выбрать все</span>
+                    {selectedIds.size > 0 && (
+                      <>
+                        <button
+                          onClick={handleBatchSoftDelete}
+                          style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                        >
+                          Пометить удаленными ({selectedIds.size})
+                        </button>
+                        <button
+                          onClick={handleBatchDelete}
+                          style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                        >
+                          Удалить выбранные ({selectedIds.size})
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                <TodoList
+                  todos={todos}
+                  selectedIds={selectedIds}
+                  onTodoUpdated={loadTodos}
+                  onEdit={handleEdit}
+                  onDelete={loadTodos}
+                  onSelect={handleSelectTodo}
+                />
+                {hasMore && (
+                  <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                    <button 
+                      onClick={() => loadTodos({}, true)}
+                      disabled={loading}
+                      style={{ padding: '10px 20px', fontSize: '16px' }}
+                    >
+                      {loading ? 'Загрузка...' : 'Загрузить еще'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      ) : (
+        <div className="todos-container">
+          {deletedLoading && deletedPage === 1 && <div className="loading">Загрузка...</div>}
+          {deletedError && <div className="error">{deletedError}</div>}
+          {!deletedLoading && !deletedError && (
+            <>
+              {deletedTodos.length > 0 && (
+                <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={deletedSelectedIds.size === deletedTodos.length && deletedTodos.length > 0}
+                    onChange={handleSelectAllDeleted}
+                  />
+                  <span>Выбрать все</span>
+                  {deletedSelectedIds.size > 0 && (
+                    <button
+                      onClick={handleBatchRestore}
+                      style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                    >
+                      Восстановить выбранные ({deletedSelectedIds.size})
+                    </button>
+                  )}
+                </div>
+              )}
+              <TodoList
+                todos={deletedTodos}
+                selectedIds={deletedSelectedIds}
+                onTodoUpdated={loadDeletedTodos}
+                onEdit={() => {}}
+                onDelete={loadDeletedTodos}
+                onSelect={handleSelectDeletedTodo}
+              />
+              {deletedHasMore && (
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                  <button 
+                    onClick={() => loadDeletedTodos(true)}
+                    disabled={deletedLoading}
+                    style={{ padding: '10px 20px', fontSize: '16px' }}
+                  >
+                    {deletedLoading ? 'Загрузка...' : 'Загрузить еще'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

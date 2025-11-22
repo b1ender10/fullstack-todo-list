@@ -63,3 +63,52 @@ export async function deleteTodo(id) {
   return handleResponse(response)
 }
 
+// Массовое удаление задач
+export async function batchDeleteTodos(ids) {
+  const response = await fetch(`${API_URL}/batch`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids })
+  })
+  return handleResponse(response)
+}
+
+// Массовое мягкое удаление задач
+export async function batchSoftDeleteTodos(ids) {
+  const response = await fetch(`${API_URL}/batch/soft`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids })
+  })
+  return handleResponse(response)
+}
+
+// Получить все удаленные задачи
+export async function getAllDeletedTodos(filters) {
+  const filterWithoutUndefined = Object.fromEntries(Object.entries(filters).filter(([key, value]) => value !== undefined))
+  const response = await fetch(`${API_URL}/deleted?` + new URLSearchParams(filterWithoutUndefined).toString())
+  const result = await handleResponse(response)
+  
+  // Если есть pagination, возвращаем объект, иначе просто data (массив)
+  if (result.pagination) {
+    return result
+  }
+  return result.data
+}
+
+// Массовое восстановление задач
+export async function batchRestoreTodos(ids) {
+  const response = await fetch(`${API_URL}/batch/soft/restore`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids })
+  })
+  return handleResponse(response)
+}
+

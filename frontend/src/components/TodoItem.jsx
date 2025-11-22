@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { updateTodo, deleteTodo } from '../services/api'
 
-function TodoItem({ todo, onToggle, onEdit, onDelete }) {
+function TodoItem({ todo, isSelected, onToggle, onEdit, onDelete, onSelect }) {
   const [isToggling, setIsToggling] = useState(false)
 
   const handleToggle = async (e) => {
@@ -47,6 +47,12 @@ function TodoItem({ todo, onToggle, onEdit, onDelete }) {
   return (
     <li className={`todo-item ${todo.completed ? 'completed' : ''}`}>
       <div className="todo-header">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onSelect(todo.id)}
+          style={{ marginRight: '10px' }}
+        />
         <input
           type="checkbox"
           className="todo-checkbox"
