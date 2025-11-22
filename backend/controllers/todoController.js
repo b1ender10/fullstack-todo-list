@@ -58,11 +58,14 @@ export const createTodo = async (req, res, next) => {
       });
     }
 
-    if (!onlyLettersAndNumbersAndSpaces.test(description)) {
-      return res.status(config.httpStatus.BAD_REQUEST).json({
-        success: false,
-        message: config.messages.validation.invalidType
-      });
+    // description опциональный, проверяем только если он есть и не пустой
+    if (description !== undefined && description !== null && description !== '') {
+      if (!onlyLettersAndNumbersAndSpaces.test(description)) {
+        return res.status(config.httpStatus.BAD_REQUEST).json({
+          success: false,
+          message: config.messages.validation.invalidType
+        });
+      }
     }
 
     if (!onlyNumbers.test(priority)) {
@@ -99,11 +102,14 @@ export const updateTodo = async (req, res, next) => {
       });
     }
 
-    if (!onlyLettersAndNumbersAndSpaces.test(description)) {
-      return res.status(config.httpStatus.BAD_REQUEST).json({
-        success: false,
-        message: config.messages.validation.invalidType
-      });
+    // description опциональный, проверяем только если он есть и не пустой
+    if (description !== undefined && description !== null && description !== '') {
+      if (!onlyLettersAndNumbersAndSpaces.test(description)) {
+        return res.status(config.httpStatus.BAD_REQUEST).json({
+          success: false,
+          message: config.messages.validation.invalidType
+        });
+      }
     }
 
     if (!onlyNumbers.test(priority)) {
