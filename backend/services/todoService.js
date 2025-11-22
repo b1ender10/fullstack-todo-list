@@ -7,6 +7,7 @@ class TodoService {
     static async getAllTodos({ completed, priority, page, limit }) {
         const conditions = [];
         const values = [];
+        conditions.push('deleted_at is NULL');
 
         // Нормализация и валидация фильтра completed
         if (completed !== undefined) {
@@ -20,7 +21,7 @@ class TodoService {
             conditions.push('completed = ?');
             values.push(normalizedCompleted);
         }
-        
+
         // Нормализация и валидация фильтра priority
         if (priority !== undefined && priority !== null && priority !== '') {
             const normalizedPriority = Number(priority);
@@ -99,6 +100,79 @@ class TodoService {
                 totalPages: Math.ceil(result.pagination.total / normalizedLimit)
             }
         }
+    }
+
+    static async getAllDeletedTodos({ page, limit }) {
+        const conditions = [];
+        const values = [];
+        conditions.push('deleted_at is NOT NULL');
+
+        // Нормализация и валидация пагинации
+        const hasPagination = page !== undefined && limit !== undefined;
+        let normalizedPage, normalizedLimit;
+
+        if (hasPagination) {
+            normalizedPage = page !== undefined && page !== null && page !== ''
+                ? Number(page)
+                : config.defaultPage;
+            
+            normalizedLimit = limit !== undefined && limit !== null && limit !== ''
+                ? Number(limit)
+                : config.defaultLimit;
+
+            // Валидация page и limit
+            if (isNaN(normalizedPage) || normalizedPage < 1) {
+                throw new Error('Page must be a positive number');
+            }
+            
+            if (isNaN(normalizedLimit) || normalizedLimit < 1) {
+                throw new Error('Limit must be a positive number');
+            }
+
+            // Максимальный лимит (защита от слишком больших запросов)
+            const maxLimit = 100;
+            if (normalizedLimit > maxLimit) {
+                normalizedLimit = maxLimit;
+            }
+        }
+
+        const paginationConditions = [];
+        const paginationValues = [];
+
+        if (hasPagination) {
+            paginationConditions.push('LIMIT ?');
+            paginationConditions.push('OFFSET ?');
+            paginationValues.push(normalizedLimit);
+            paginationValues.push((normalizedPage - 1) * normalizedLimit);
+        }
+
+        // Вызов модели
+        const result = await Todo.getAll({
+            conditions: conditions,
+            values: values,
+            paginationConditions: paginationConditions,
+            paginationValues: paginationValues,
+            hasPagination: hasPagination,
+        });
+
+        // Service всегда возвращает единый формат
+        if (!hasPagination) {
+            return {
+                data: result,
+                pagination: null
+            };
+        }
+
+        return {
+            data: result.data,
+            pagination: {
+                page: normalizedPage,
+                limit: normalizedLimit,
+                total: result.pagination.total,
+                totalPages: Math.ceil(result.pagination.total / normalizedLimit)
+            }
+        }
+            
     }
 
     static async getTodoById(id) {
@@ -322,6 +396,62 @@ class TodoService {
 
         return todos;
     }
+
+    static async batchSoftDeleteTodos(ids) {
+         // Валидация: ids должен быть непустым массивом
+         if (!Array.isArray(ids) || ids.length === 0) {
+            throw new Error('ids must be a non-empty array');
+        }
+
+        // Нормализация и валидация каждого ID
+        const normalizedIds = ids.map(id => Number(id));
+
+        // Проверяем, что все ID валидны
+        const invalidIds = normalizedIds.filter(id => isNaN(id) || id < 1 || !Number.isInteger(id));
+        if (invalidIds.length > 0) {
+            throw new Error(`Invalid IDs: [${invalidIds.join(', ')}]. All IDs must be positive integers`);
+        }
+
+        // Удаляем дубликаты (если пользователь случайно передал один ID дважды)
+        const uniqueIds = [...new Set(normalizedIds)];
+
+        // Вызов модели (модель сама проверяет существование всех задач)
+        const todos = await Todo.batchSoftDelete(uniqueIds);
+
+        // Логируем успешное удаление
+        const deletedIds = todos.map(t => t.id);
+        logger.info('Todos batch deleted', { count: todos.length, ids: deletedIds });
+
+        return todos;
+    }
+
+    static async batchSoftDeleteRestoreTodos(ids) {
+        // Валидация: ids должен быть непустым массивом
+        if (!Array.isArray(ids) || ids.length === 0) {
+           throw new Error('ids must be a non-empty array');
+       }
+
+       // Нормализация и валидация каждого ID
+       const normalizedIds = ids.map(id => Number(id));
+
+       // Проверяем, что все ID валидны
+       const invalidIds = normalizedIds.filter(id => isNaN(id) || id < 1 || !Number.isInteger(id));
+       if (invalidIds.length > 0) {
+           throw new Error(`Invalid IDs: [${invalidIds.join(', ')}]. All IDs must be positive integers`);
+       }
+
+       // Удаляем дубликаты (если пользователь случайно передал один ID дважды)
+       const uniqueIds = [...new Set(normalizedIds)];
+
+       // Вызов модели (модель сама проверяет существование всех задач)
+       const todos = await Todo.batchSoftDeleteRestore(uniqueIds);
+
+       // Логируем успешное удаление
+       const deletedIds = todos.map(t => t.id);
+       logger.info('Todos batch deleted', { count: todos.length, ids: deletedIds });
+
+       return todos;
+   }
 }
 
 export default TodoService;

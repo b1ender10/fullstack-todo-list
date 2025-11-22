@@ -20,6 +20,23 @@ export const getAllTodos = async (req, res, next) => {
   }
 };
 
+// GET /api/todos/deleted - получить все удаленные задачи
+export const getAllDeletedTodos = async (req, res, next) => {
+  const { page, limit } = req.query;
+  try {
+    const result = await TodoService.getAllDeletedTodos({ page, limit });
+    
+    // Service всегда возвращает единый формат { data, pagination }
+    res.json({
+      success: true,
+      data: result.data,
+      ...(result.pagination && { pagination: result.pagination })
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /api/todos/:id - получить задачу по ID
 export const getTodoById = async (req, res, next) => {
   try {
@@ -175,6 +192,55 @@ export const batchDeleteTodos = async (req, res, next) => {
       data: todos,
       message: config.messages.todo.deleted
     });
+  } catch (error) {
+    // Обработка ошибки "Todos not found" - возвращаем 404
+    if (error.message.includes('not found')) {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+}
+
+export const batchSoftDeleteTodos = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+
+    const todos = await TodoService.batchSoftDeleteTodos(ids);
+
+    res.json({
+      success: true,
+      data: todos,
+      message: config.messages.todo.deleted
+    })
+  } catch (error) {
+    // Обработка ошибки "Todos not found" - возвращаем 404
+    if (error.message.includes('not found')) {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+}
+
+export const batchSoftDeleteRestoreTodos = async (req, res, next) => {
+  console.log('🚀 [DEBUG] batchSoftDeleteRestoreTodos контроллер вызван!');
+  console.log('🚀 [DEBUG] req.body:', req.body);
+  try {
+    const { ids } = req.body;
+    console.log('🚀 [DEBUG] ids из req.body:', ids);
+
+    const todos = await TodoService.batchSoftDeleteRestoreTodos(ids);
+
+    res.json({
+      success: true,
+      data: todos,
+      message: config.messages.todo.deleted
+    })
   } catch (error) {
     // Обработка ошибки "Todos not found" - возвращаем 404
     if (error.message.includes('not found')) {

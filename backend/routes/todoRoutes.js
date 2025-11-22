@@ -5,7 +5,10 @@ import {
   createTodo,
   updateTodo,
   deleteTodo,
-  batchDeleteTodos
+  batchDeleteTodos,
+  batchSoftDeleteTodos,
+  batchSoftDeleteRestoreTodos,
+  getAllDeletedTodos
 } from '../controllers/todoController.js';
 import {
   validateCreateTodo,
@@ -16,6 +19,9 @@ import {
 
 const router = express.Router();
 
+// GET /api/todos/deleted - получить все удаленные задачи
+router.get('/deleted', getAllDeletedTodos);
+
 // GET /api/todos - получить все задачи
 router.get('/', getAllTodos);
 
@@ -25,8 +31,14 @@ router.get('/:id', validateId, getTodoById);
 // POST /api/todos - создать новую задачу
 router.post('/', validateCreateTodo, createTodo);
 
+// PUT /api/todos/batch/soft/restore - восстановить несколько задач (пометить) (должен быть ПЕРЕД /:id!)
+router.put('/batch/soft/restore', validateBatchDelete, batchSoftDeleteRestoreTodos);
+
 // PUT /api/todos/:id - обновить задачу
 router.put('/:id', validateUpdateTodo, updateTodo);
+
+// DELETE /api/todos/batch/soft - удалить несколько задач (пометить) (должен быть ПЕРЕД /:id!)
+router.delete('/batch/soft', validateBatchDelete, batchSoftDeleteTodos);
 
 // DELETE /api/todos/batch - удалить несколько задач (должен быть ПЕРЕД /:id!)
 router.delete('/batch', validateBatchDelete, batchDeleteTodos);
