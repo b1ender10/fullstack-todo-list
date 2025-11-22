@@ -51,6 +51,7 @@ export const config = {
       priorityInvalid: 'Приоритет должен быть числом от 1 до 3',
       general: 'Ошибка валидации',
       invalidType: 'Неверный тип',
+      emptyArray: 'Массив не может быть пустым',
     },
     errors: {
       database: 'Ошибка базы данных',

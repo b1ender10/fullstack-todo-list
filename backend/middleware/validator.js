@@ -85,3 +85,16 @@ export const validateId = [
   handleValidationErrors
 ];
 
+export const validateBatchDelete = [
+  body('ids')
+    .isArray()
+    .withMessage(config.messages.validation.invalidType)
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyArray)
+    .custom((value) => {
+      console.log(value);
+      return value.every(id => Number.isInteger(id) && id > 0);
+    })
+    .withMessage(config.messages.validation.idInvalid),
+  handleValidationErrors
+]

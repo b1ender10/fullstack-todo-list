@@ -158,3 +158,25 @@ export const deleteTodo = async (req, res, next) => {
   }
 };
 
+export const batchDeleteTodos = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+
+    const todos = await TodoService.batchDeleteTodos(ids);
+
+    res.json({
+      success: true,
+      data: todos,
+      message: config.messages.todo.deleted
+    });
+  } catch (error) {
+    // Обработка ошибки "Todos not found" - возвращаем 404
+    if (error.message.includes('not found')) {
+      return res.status(config.httpStatus.NOT_FOUND).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+}

@@ -74,5 +74,51 @@ export class Todo {
     // Возвращаем удаленную задачу
     return todo;
   }
+
+  static async batchDelete(ids) {
+    // Начинаем транзакцию
+    await db.run('BEGIN TRANSACTION');
+
+    try {
+      // Получаем все задачи одним запросом перед удалением
+      const placeholders = ids.map(() => '?').join(',');
+      const todosToDelete = await db.all(
+        `SELECT * FROM todos WHERE id IN (${placeholders})`,
+        ids
+      );
+
+      // Проверяем, что все запрошенные ID найдены (принцип "все или ничего")
+      if (todosToDelete.length !== ids.length) {
+        const foundIds = todosToDelete.map(t => t.id);
+        const missingIds = ids.filter(id => !foundIds.includes(id));
+        throw new Error(`Todos with IDs [${missingIds.join(', ')}] not found`);
+      }
+
+      // Удаляем все задачи одним запросом
+      await db.run(
+        `DELETE FROM todos WHERE id IN (${placeholders})`,
+        ids
+      );
+
+      // Коммитим транзакцию
+      await db.run('COMMIT');
+
+      // Преобразуем данные (boolean для completed)
+      return todosToDelete.map(todo => ({
+        ...todo,
+        completed: Boolean(todo.completed)
+      }));
+    } catch (error) {
+      // Откатываем транзакцию при ошибке
+      try {
+        await db.run('ROLLBACK');
+      } catch (rollbackError) {
+        // Логируем ошибку отката, но пробрасываем оригинальную ошибку
+        console.error('Ошибка при откате транзакции:', rollbackError);
+      }
+      // Пробрасываем оригинальную ошибку дальше
+      throw error;
+    }
+  }
 }
 

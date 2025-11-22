@@ -4,12 +4,14 @@ import {
   getTodoById,
   createTodo,
   updateTodo,
-  deleteTodo
+  deleteTodo,
+  batchDeleteTodos
 } from '../controllers/todoController.js';
 import {
   validateCreateTodo,
   validateUpdateTodo,
-  validateId
+  validateId,
+  validateBatchDelete
 } from '../middleware/validator.js';
 
 const router = express.Router();
@@ -25,6 +27,9 @@ router.post('/', validateCreateTodo, createTodo);
 
 // PUT /api/todos/:id - обновить задачу
 router.put('/:id', validateUpdateTodo, updateTodo);
+
+// DELETE /api/todos/batch - удалить несколько задач (должен быть ПЕРЕД /:id!)
+router.delete('/batch', validateBatchDelete, batchDeleteTodos);
 
 // DELETE /api/todos/:id - удалить задачу
 router.delete('/:id', validateId, deleteTodo);

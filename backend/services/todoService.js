@@ -294,6 +294,34 @@ class TodoService {
         
         return todo;
     }
+
+    static async batchDeleteTodos(ids) {
+        // Валидация: ids должен быть непустым массивом
+        if (!Array.isArray(ids) || ids.length === 0) {
+            throw new Error('ids must be a non-empty array');
+        }
+
+        // Нормализация и валидация каждого ID
+        const normalizedIds = ids.map(id => Number(id));
+
+        // Проверяем, что все ID валидны
+        const invalidIds = normalizedIds.filter(id => isNaN(id) || id < 1 || !Number.isInteger(id));
+        if (invalidIds.length > 0) {
+            throw new Error(`Invalid IDs: [${invalidIds.join(', ')}]. All IDs must be positive integers`);
+        }
+
+        // Удаляем дубликаты (если пользователь случайно передал один ID дважды)
+        const uniqueIds = [...new Set(normalizedIds)];
+
+        // Вызов модели (модель сама проверяет существование всех задач)
+        const todos = await Todo.batchDelete(uniqueIds);
+
+        // Логируем успешное удаление
+        const deletedIds = todos.map(t => t.id);
+        logger.info('Todos batch deleted', { count: todos.length, ids: deletedIds });
+
+        return todos;
+    }
 }
 
 export default TodoService;
