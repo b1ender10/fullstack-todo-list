@@ -452,6 +452,21 @@ class TodoService {
 
        return todos;
    }
+
+   static async searchTodos(q) {
+        const normalizedQ = q.trim();
+        if (normalizedQ === '') {
+            throw new Error('q cannot be empty');
+        }
+
+        // Вызов модели
+        const result = await Todo.searchTodos({
+            q: normalizedQ
+        });
+
+        return result;
+    
+   }
 }
 
 export default TodoService;

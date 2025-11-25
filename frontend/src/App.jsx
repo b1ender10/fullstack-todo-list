@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import TodoForm from './components/TodoForm'
 import TodoList from './components/TodoList'
-import { getAllTodos, getAllDeletedTodos, batchDeleteTodos, batchSoftDeleteTodos, batchRestoreTodos } from './services/api'
+import { getAllTodos, getAllDeletedTodos, batchDeleteTodos, batchSoftDeleteTodos, batchRestoreTodos, searchTodos } from './services/api'
 import './styles.css'
 
 function App() {
@@ -19,6 +19,13 @@ function App() {
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [currentPage, setCurrentPage] = useState('main')
   
+  // Состояния для поиска
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState(null)
+  const searchTimeoutRef = useRef(null)
+  
   // Состояния для страницы удаленных задач
   const [deletedTodos, setDeletedTodos] = useState([])
   const [deletedLoading, setDeletedLoading] = useState(false)
@@ -31,12 +38,50 @@ function App() {
 
   // Загрузка задач при монтировании компонента
   useEffect(() => {
+    setSearchQuery('')
+    setSearchResults([])
     if (currentPage === 'main') {
       loadTodos()
     } else {
       loadDeletedTodos()
     }
   }, [currentPage])
+
+  // Debounce для поиска
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (searchQuery.trim() === '') {
+      setSearchResults([])
+      setSearchError(null)
+      setSelectedIds(new Set())
+      return
+    }
+
+    setSearchLoading(true)
+    setSearchError(null)
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const results = await searchTodos(searchQuery.trim())
+        setSearchResults(results)
+        setSelectedIds(new Set())
+      } catch (err) {
+        setSearchError(`Ошибка поиска: ${err.message}`)
+        setSearchResults([])
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 500)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
 
   const loadTodos = useCallback(async (overrides = {}, append = false) => {
     const nextPriority = overrides.priority ?? priorityFilter
@@ -302,82 +347,163 @@ function App() {
             onCancel={handleCancelEdit}
           />
 
-          <div>
-            <select onChange={(e) => {
-              const value = e.target.value
-              setPriorityFilter(value)
-              loadTodos({ priority: value }, false)
-            }}>
-              <option value="">All</option>
-              <option value="1">Low</option>
-              <option value="2">Medium</option>
-              <option value="3">High</option>
-            </select>
-
-            <select onChange={(e) => {
-              const value = e.target.value
-              setCompletedFilter(value)
-              loadTodos({ completed: value }, false)
-            }}>
-              <option value="">All</option>
-              <option value="true">Completed</option>
-              <option value="false">Not Completed</option>
-            </select>
+          <div style={{ marginBottom: '15px' }}>
+            <input
+              type="text"
+              placeholder="Поиск по заголовку или описанию..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                boxSizing: 'border-box'
+              }}
+            />
           </div>
 
-          <div className="todos-container">
-            {loading && page === 1 && <div className="loading">Загрузка...</div>}
-            {error && <div className="error">{error}</div>}
-            {!loading && !error && (
-              <>
-                {todos.length > 0 && (
-                  <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.size === todos.length && todos.length > 0}
-                      onChange={handleSelectAll}
-                    />
-                    <span>Выбрать все</span>
-                    {selectedIds.size > 0 && (
-                      <>
-                        <button
-                          onClick={handleBatchSoftDelete}
-                          style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
-                        >
-                          Пометить удаленными ({selectedIds.size})
-                        </button>
-                        <button
-                          onClick={handleBatchDelete}
-                          style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
-                        >
-                          Удалить выбранные ({selectedIds.size})
-                        </button>
-                      </>
+          {searchQuery.trim() ? (
+            <div className="todos-container">
+              {searchLoading && <div className="loading">Поиск...</div>}
+              {searchError && <div className="error">{searchError}</div>}
+              {!searchLoading && !searchError && (
+                <>
+                  {searchResults.length > 0 && (
+                    <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === searchResults.length && searchResults.length > 0}
+                        onChange={() => {
+                          if (selectedIds.size === searchResults.length) {
+                            setSelectedIds(new Set())
+                          } else {
+                            setSelectedIds(new Set(searchResults.map(t => t.id)))
+                          }
+                        }}
+                      />
+                      <span>Выбрать все ({searchResults.length} найдено)</span>
+                      {selectedIds.size > 0 && (
+                        <>
+                          <button
+                            onClick={handleBatchSoftDelete}
+                            style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                          >
+                            Пометить удаленными ({selectedIds.size})
+                          </button>
+                          <button
+                            onClick={handleBatchDelete}
+                            style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                          >
+                            Удалить выбранные ({selectedIds.size})
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <TodoList
+                    todos={searchResults}
+                    selectedIds={selectedIds}
+                    onTodoUpdated={() => {
+                      setSearchQuery('')
+                      loadTodos()
+                    }}
+                    onEdit={handleEdit}
+                    onDelete={() => {
+                      setSearchQuery('')
+                      loadTodos()
+                    }}
+                    onSelect={handleSelectTodo}
+                  />
+                  {searchResults.length === 0 && !searchLoading && (
+                    <div className="empty-state">
+                      <p>Ничего не найдено</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div>
+                <select onChange={(e) => {
+                  const value = e.target.value
+                  setPriorityFilter(value)
+                  loadTodos({ priority: value }, false)
+                }}>
+                  <option value="">All</option>
+                  <option value="1">Low</option>
+                  <option value="2">Medium</option>
+                  <option value="3">High</option>
+                </select>
+
+                <select onChange={(e) => {
+                  const value = e.target.value
+                  setCompletedFilter(value)
+                  loadTodos({ completed: value }, false)
+                }}>
+                  <option value="">All</option>
+                  <option value="true">Completed</option>
+                  <option value="false">Not Completed</option>
+                </select>
+              </div>
+
+              <div className="todos-container">
+                {loading && page === 1 && <div className="loading">Загрузка...</div>}
+                {error && <div className="error">{error}</div>}
+                {!loading && !error && (
+                  <>
+                    {todos.length > 0 && (
+                      <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === todos.length && todos.length > 0}
+                          onChange={handleSelectAll}
+                        />
+                        <span>Выбрать все</span>
+                        {selectedIds.size > 0 && (
+                          <>
+                            <button
+                              onClick={handleBatchSoftDelete}
+                              style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                            >
+                              Пометить удаленными ({selectedIds.size})
+                            </button>
+                            <button
+                              onClick={handleBatchDelete}
+                              style={{ padding: '8px 16px', fontSize: '14px', marginLeft: '10px' }}
+                            >
+                              Удалить выбранные ({selectedIds.size})
+                            </button>
+                          </>
+                        )}
+                      </div>
                     )}
-                  </div>
+                    <TodoList
+                      todos={todos}
+                      selectedIds={selectedIds}
+                      onTodoUpdated={loadTodos}
+                      onEdit={handleEdit}
+                      onDelete={loadTodos}
+                      onSelect={handleSelectTodo}
+                    />
+                    {hasMore && (
+                      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                        <button 
+                          onClick={() => loadTodos({}, true)}
+                          disabled={loading}
+                          style={{ padding: '10px 20px', fontSize: '16px' }}
+                        >
+                          {loading ? 'Загрузка...' : 'Загрузить еще'}
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
-                <TodoList
-                  todos={todos}
-                  selectedIds={selectedIds}
-                  onTodoUpdated={loadTodos}
-                  onEdit={handleEdit}
-                  onDelete={loadTodos}
-                  onSelect={handleSelectTodo}
-                />
-                {hasMore && (
-                  <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <button 
-                      onClick={() => loadTodos({}, true)}
-                      disabled={loading}
-                      style={{ padding: '10px 20px', fontSize: '16px' }}
-                    >
-                      {loading ? 'Загрузка...' : 'Загрузить еще'}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <div className="todos-container">

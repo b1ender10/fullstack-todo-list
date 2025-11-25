@@ -39,7 +39,8 @@ export const config = {
       notFound: 'Задача не найдена',
       created: 'Задача успешно создана',
       updated: 'Задача успешно обновлена',
-      deleted: 'Задача успешно удалена'
+      deleted: 'Задача успешно удалена',
+      search: 'Поиск выполнен успешно'
     },
     validation: {
       titleRequired: 'Название задачи обязательно',
@@ -52,6 +53,7 @@ export const config = {
       general: 'Ошибка валидации',
       invalidType: 'Неверный тип',
       emptyArray: 'Массив не может быть пустым',
+      emptyString: 'Строка поиска не может быть пустой',
     },
     errors: {
       database: 'Ошибка базы данных',

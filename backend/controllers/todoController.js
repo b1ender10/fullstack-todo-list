@@ -228,12 +228,8 @@ export const batchSoftDeleteTodos = async (req, res, next) => {
 }
 
 export const batchSoftDeleteRestoreTodos = async (req, res, next) => {
-  console.log('🚀 [DEBUG] batchSoftDeleteRestoreTodos контроллер вызван!');
-  console.log('🚀 [DEBUG] req.body:', req.body);
   try {
     const { ids } = req.body;
-    console.log('🚀 [DEBUG] ids из req.body:', ids);
-
     const todos = await TodoService.batchSoftDeleteRestoreTodos(ids);
 
     res.json({
@@ -249,6 +245,23 @@ export const batchSoftDeleteRestoreTodos = async (req, res, next) => {
         message: error.message
       });
     }
+    next(error);
+  }
+}
+
+export const searchTodos = async (req, res, next) => {
+  try {
+
+    const { q } = req.query;
+    const todos = await TodoService.searchTodos(q);
+
+    res.json({
+      success: true,
+      data: todos,
+      message: config.messages.todo.search
+    })
+
+  } catch (error) {
     next(error);
   }
 }

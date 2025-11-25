@@ -1,4 +1,4 @@
-import { body, param, validationResult } from 'express-validator';
+import { body, param, validationResult, query } from 'express-validator';
 import { config } from '../config/constants.js';
 
 // Middleware для обработки ошибок валидации
@@ -96,5 +96,16 @@ export const validateBatchDelete = [
       return value.every(id => Number.isInteger(id) && id > 0);
     })
     .withMessage(config.messages.validation.idInvalid),
+  handleValidationErrors
+]
+
+export const validateSearchTodos = [
+  query('q')
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
+    .trim()
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyString)
+    .escape(),
   handleValidationErrors
 ]

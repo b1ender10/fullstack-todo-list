@@ -220,5 +220,19 @@ export class Todo {
     }
 
   }
+
+  static async searchTodos(q) {
+    const whereClause = `WHERE (title LIKE ? OR description LIKE ?) AND deleted_at IS NULL`;
+    const query = `SELECT * FROM todos ${whereClause} ORDER BY created_at DESC`;
+    const todos = await db.all(query, [`%${q.q}%`, `%${q.q}%`]);
+    
+    // Преобразование данных (boolean для completed)
+    const todosResponse = todos.map(todo => ({
+      ...todo,
+      completed: Boolean(todo.completed) // SQLite хранит boolean как 0/1
+    }));
+
+    return todosResponse;
+  }
 }
 

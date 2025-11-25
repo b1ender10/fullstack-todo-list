@@ -8,19 +8,24 @@ import {
   batchDeleteTodos,
   batchSoftDeleteTodos,
   batchSoftDeleteRestoreTodos,
-  getAllDeletedTodos
+  getAllDeletedTodos,
+  searchTodos
 } from '../controllers/todoController.js';
 import {
   validateCreateTodo,
   validateUpdateTodo,
   validateId,
-  validateBatchDelete
+  validateBatchDelete,
+  validateSearchTodos
 } from '../middleware/validator.js';
 
 const router = express.Router();
 
 // GET /api/todos/deleted - получить все удаленные задачи
 router.get('/deleted', getAllDeletedTodos);
+
+// GET /api/todos/search - поиск задач по заголовку или описанию, принимает query параметр q
+router.get('/search', validateSearchTodos, searchTodos);
 
 // GET /api/todos - получить все задачи
 router.get('/', getAllTodos);

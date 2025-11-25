@@ -112,3 +112,10 @@ export async function batchRestoreTodos(ids) {
   return handleResponse(response)
 }
 
+// Поиск задач
+export async function searchTodos(query) {
+  const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`)
+  const result = await handleResponse(response)
+  return result.data
+}
+
