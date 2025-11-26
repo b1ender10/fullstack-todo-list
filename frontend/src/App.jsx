@@ -11,6 +11,8 @@ function App() {
   const [editingTodo, setEditingTodo] = useState(null)
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [completedFilter, setCompletedFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
   const pageRef = useRef(1)
   const [limit] = useState(3)
@@ -86,6 +88,8 @@ function App() {
   const loadTodos = useCallback(async (overrides = {}, append = false) => {
     const nextPriority = overrides.priority ?? priorityFilter
     const nextCompleted = overrides.completed ?? completedFilter
+    const nextSortBy = overrides.sortBy ?? sortBy
+    const nextSortOrder = overrides.sortOrder ?? sortOrder
     
     if (!append) {
       setLoading(true)
@@ -108,6 +112,8 @@ function App() {
         completed: !nextCompleted || nextCompleted === 'all' ? undefined : nextCompleted,
         page: currentPage,
         limit,
+        sortBy: nextSortBy,
+        sortOrder: nextSortOrder,
       })
       
       // Проверяем, вернулся ли объект с pagination или просто массив
@@ -139,7 +145,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [priorityFilter, completedFilter, limit])
+  }, [priorityFilter, completedFilter, sortBy, sortOrder, limit])
 
   const handleTodoCreated = () => {
     loadTodos()
@@ -426,7 +432,7 @@ function App() {
             </div>
           ) : (
             <>
-              <div>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <select onChange={(e) => {
                   const value = e.target.value
                   setPriorityFilter(value)
@@ -446,6 +452,27 @@ function App() {
                   <option value="">All</option>
                   <option value="true">Completed</option>
                   <option value="false">Not Completed</option>
+                </select>
+
+                <select onChange={(e) => {
+                  const value = e.target.value
+                  setSortBy(value)
+                  loadTodos({ sortBy: value }, false)
+                }} value={sortBy}>
+                  <option value="created_at">По дате создания</option>
+                  <option value="updated_at">По дате обновления</option>
+                  <option value="title">По заголовку</option>
+                  <option value="description">По описанию</option>
+                  <option value="priority">По приоритету</option>
+                </select>
+
+                <select onChange={(e) => {
+                  const value = e.target.value
+                  setSortOrder(value)
+                  loadTodos({ sortOrder: value }, false)
+                }} value={sortOrder}>
+                  <option value="desc">По убыванию</option>
+                  <option value="asc">По возрастанию</option>
                 </select>
               </div>
 

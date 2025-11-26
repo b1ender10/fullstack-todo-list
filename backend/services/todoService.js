@@ -4,7 +4,7 @@ import logger from '../utils/logger.js';
 
 class TodoService {
 
-    static async getAllTodos({ completed, priority, page, limit }) {
+    static async getAllTodos({ completed, priority, page, limit, sortBy, sortOrder }) {
         const conditions = [];
         const values = [];
         conditions.push('deleted_at is NULL');
@@ -33,6 +33,24 @@ class TodoService {
             
             conditions.push('priority = ?');
             values.push(normalizedPriority);
+        }
+
+        let sortCondition = "";
+
+        // Разрешенные поля для сортировки: title, created_at, priority, completed
+        const allowedSortFields = ['title', 'created_at', 'priority', 'completed'];
+        if (sortBy && allowedSortFields.includes(sortBy)) {
+            sortCondition = `ORDER BY ${sortBy}`;
+        } else {
+            sortCondition = 'ORDER BY created_at';
+        }
+
+        // Разрешенные направления сортировки: asc, desc
+        const allowedSortOrders = ['asc', 'desc'];
+        if (sortOrder && allowedSortOrders.includes(sortOrder.toLowerCase())) {
+            sortCondition += ` ${sortOrder.toLowerCase()}`;
+        } else {
+            sortCondition += ' DESC';
         }
 
         // Нормализация и валидация пагинации
@@ -81,6 +99,7 @@ class TodoService {
             paginationConditions: paginationConditions,
             paginationValues: paginationValues,
             hasPagination: hasPagination,
+            sortCondition: sortCondition,
         });
 
         // Service всегда возвращает единый формат

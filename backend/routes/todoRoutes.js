@@ -16,7 +16,8 @@ import {
   validateUpdateTodo,
   validateId,
   validateBatchDelete,
-  validateSearchTodos
+  validateSearchTodos,
+  validateGetAllTodos
 } from '../middleware/validator.js';
 
 const router = express.Router();
@@ -28,7 +29,7 @@ router.get('/deleted', getAllDeletedTodos);
 router.get('/search', validateSearchTodos, searchTodos);
 
 // GET /api/todos - получить все задачи
-router.get('/', getAllTodos);
+router.get('/', validateGetAllTodos, getAllTodos);
 
 // GET /api/todos/:id - получить задачу по ID
 router.get('/:id', validateId, getTodoById);

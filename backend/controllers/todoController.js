@@ -5,9 +5,9 @@ import TodoService from '../services/todoService.js';
 
 // GET /api/todos - получить все задачи
 export const getAllTodos = async (req, res, next) => {
-  const { completed, priority, page, limit } = req.query;
+  const { completed, priority, page, limit, sortBy, sortOrder } = req.query;
   try {
-    const result = await TodoService.getAllTodos({ completed, priority, page, limit });
+    const result = await TodoService.getAllTodos({ completed, priority, page, limit, sortBy, sortOrder });
     
     // Service всегда возвращает единый формат { data, pagination }
     res.json({

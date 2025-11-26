@@ -4,10 +4,10 @@ import { config } from '../config/constants.js';
 // Модель Todo - содержит методы для работы с данными
 export class Todo {
   // Получить все задачи
-  static async getAll({ conditions, values, paginationConditions, paginationValues, hasPagination }) {
+  static async getAll({ conditions, values, paginationConditions, paginationValues, hasPagination, sortCondition }) {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const paginationClause = paginationConditions.length > 0 ? ` ${paginationConditions.join(' ')}` : '';
-    const query = `SELECT * FROM todos ${whereClause} ORDER BY created_at DESC ${paginationClause}`;
+    const query = `SELECT * FROM todos ${whereClause} ${sortCondition} ${paginationClause}`;
     const todos = await db.all(query, [...values, ...paginationValues]);
     
     // Преобразование данных (boolean для completed)

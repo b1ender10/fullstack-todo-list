@@ -109,3 +109,45 @@ export const validateSearchTodos = [
     .escape(),
   handleValidationErrors
 ]
+
+export const validateGetAllTodos = [
+  query('completed')
+    .optional()
+    .isBoolean()
+    .withMessage(config.messages.validation.completedInvalid)
+    .toBoolean(),
+  query('priority')
+    .optional()
+    .isInt({ min: config.priorityMin, max: config.priorityMax })
+    .withMessage(config.messages.validation.priorityInvalid)
+    .toInt(),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage(config.messages.validation.pageInvalid)
+    .toInt(),
+  query('limit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage(config.messages.validation.limitInvalid)
+    .toInt(),
+  query('sortBy')
+    .optional()
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
+    .trim()
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyString)
+    .isIn(['title', 'created_at', 'priority', 'completed'])
+    .withMessage('sortBy must be one of: title, created_at, priority, completed'),
+  query('sortOrder')
+    .optional()
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
+    .trim()
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyString)
+    .isIn(['asc', 'desc'])
+    .withMessage('sortOrder must be asc or desc'),
+  handleValidationErrors
+]
