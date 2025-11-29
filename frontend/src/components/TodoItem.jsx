@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { updateTodo, deleteTodo } from '../services/api'
 
-function TodoItem({ todo, isSelected, onToggle, onEdit, onDelete, onSelect }) {
+function TodoItem({ todo, isSelected, onToggle, onEdit, onDelete, onSelect, categories = [] }) {
   const [isToggling, setIsToggling] = useState(false)
 
   const handleToggle = async (e) => {
@@ -44,6 +44,9 @@ function TodoItem({ todo, isSelected, onToggle, onEdit, onDelete, onSelect }) {
     })
   }
 
+  // Категории теперь приходят как массив todo.categories
+  const todoCategories = Array.isArray(todo.categories) ? todo.categories : []
+
   return (
     <li className={`todo-item ${todo.completed ? 'completed' : ''}`}>
       <div className="todo-header">
@@ -61,7 +64,27 @@ function TodoItem({ todo, isSelected, onToggle, onEdit, onDelete, onSelect }) {
           disabled={isToggling}
         />
         <div className="todo-content">
-          <div className="todo-title">{todo.title}</div>
+          <div className="todo-title">
+            {todo.title}
+            {todoCategories.length > 0 && (
+              <span style={{ marginLeft: '10px', display: 'inline-flex', gap: '5px', flexWrap: 'wrap' }}>
+                {todoCategories.map(cat => (
+                  <span
+                    key={cat.id}
+                    style={{ 
+                      padding: '2px 8px', 
+                      backgroundColor: cat.color || '#e0e0e0', 
+                      borderRadius: '4px', 
+                      fontSize: '0.85em',
+                      color: '#000'
+                    }}
+                  >
+                    {cat.name}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
           {todo.description && (
             <div className="todo-description">{todo.description}</div>
           )}

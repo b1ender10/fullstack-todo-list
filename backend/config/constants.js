@@ -2,6 +2,7 @@ export const config = {
   // Порты и URL
   defaultPort: 3000,
   apiBasePath: '/api/todos',
+  apiBasePathCategories: '/api/categories',
   healthCheckPath: '/health',
   
   // Значения по умолчанию
@@ -40,7 +41,14 @@ export const config = {
       created: 'Задача успешно создана',
       updated: 'Задача успешно обновлена',
       deleted: 'Задача успешно удалена',
-      search: 'Поиск выполнен успешно'
+      search: 'Поиск выполнен успешно',
+      categories: 'Категории получены успешно',
+      categoryAdded: 'Категория успешно добавлена к задаче',
+      categoryRemoved: 'Категория успешно удалена из задачи'
+    },
+    category: {
+      created: 'Категория успешно создана',
+      deleted: 'Категория успешно удалена'
     },
     validation: {
       titleRequired: 'Название задачи обязательно',

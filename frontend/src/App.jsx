@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import TodoForm from './components/TodoForm'
 import TodoList from './components/TodoList'
-import { getAllTodos, getAllDeletedTodos, batchDeleteTodos, batchSoftDeleteTodos, batchRestoreTodos, searchTodos } from './services/api'
+import { getAllTodos, getAllDeletedTodos, batchDeleteTodos, batchSoftDeleteTodos, batchRestoreTodos, searchTodos, getAllCategories } from './services/api'
 import './styles.css'
 
 function App() {
@@ -11,8 +11,10 @@ function App() {
   const [editingTodo, setEditingTodo] = useState(null)
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [completedFilter, setCompletedFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState('desc')
+  const [categories, setCategories] = useState([])
   const [page, setPage] = useState(1)
   const pageRef = useRef(1)
   const [limit] = useState(3)
@@ -37,6 +39,21 @@ function App() {
   const [deletedHasMore, setDeletedHasMore] = useState(false)
   const [deletedPagination, setDeletedPagination] = useState(null)
   const [deletedSelectedIds, setDeletedSelectedIds] = useState(new Set())
+
+  // Загрузка категорий при монтировании
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const result = await getAllCategories()
+        const categoriesData = result?.data?.data?.data || result?.data?.data || result?.data || []
+        setCategories(Array.isArray(categoriesData) ? categoriesData : [])
+      } catch (err) {
+        console.error('Ошибка загрузки категорий:', err)
+        setCategories([])
+      }
+    }
+    loadCategories()
+  }, [])
 
   // Загрузка задач при монтировании компонента
   useEffect(() => {
@@ -88,6 +105,7 @@ function App() {
   const loadTodos = useCallback(async (overrides = {}, append = false) => {
     const nextPriority = overrides.priority ?? priorityFilter
     const nextCompleted = overrides.completed ?? completedFilter
+    const nextCategory = overrides.categoryId ?? categoryFilter
     const nextSortBy = overrides.sortBy ?? sortBy
     const nextSortOrder = overrides.sortOrder ?? sortOrder
     
@@ -110,6 +128,7 @@ function App() {
       const result = await getAllTodos({
         priority: !nextPriority || nextPriority === 'all' ? undefined : nextPriority,
         completed: !nextCompleted || nextCompleted === 'all' ? undefined : nextCompleted,
+        categoryId: !nextCategory || nextCategory === 'all' ? undefined : nextCategory,
         page: currentPage,
         limit,
         sortBy: nextSortBy,
@@ -145,7 +164,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [priorityFilter, completedFilter, sortBy, sortOrder, limit])
+  }, [priorityFilter, completedFilter, categoryFilter, sortBy, sortOrder, limit])
 
   const handleTodoCreated = () => {
     loadTodos()
@@ -351,6 +370,7 @@ function App() {
             onTodoCreated={handleTodoCreated}
             onTodoUpdated={handleTodoUpdated}
             onCancel={handleCancelEdit}
+            categories={categories}
           />
 
           <div style={{ marginBottom: '15px' }}>
@@ -421,6 +441,7 @@ function App() {
                       loadTodos()
                     }}
                     onSelect={handleSelectTodo}
+                    categories={categories}
                   />
                   {searchResults.length === 0 && !searchLoading && (
                     <div className="empty-state">
@@ -452,6 +473,17 @@ function App() {
                   <option value="">All</option>
                   <option value="true">Completed</option>
                   <option value="false">Not Completed</option>
+                </select>
+
+                <select onChange={(e) => {
+                  const value = e.target.value
+                  setCategoryFilter(value)
+                  loadTodos({ categoryId: value }, false)
+                }}>
+                    <option value="all">Все категории</option>
+                    {Array.isArray(categories) && categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                 </select>
 
                 <select onChange={(e) => {
@@ -514,6 +546,7 @@ function App() {
                       onEdit={handleEdit}
                       onDelete={loadTodos}
                       onSelect={handleSelectTodo}
+                      categories={categories}
                     />
                     {hasMore && (
                       <div style={{ textAlign: 'center', marginTop: '20px' }}>
@@ -563,6 +596,7 @@ function App() {
                 onEdit={() => {}}
                 onDelete={loadDeletedTodos}
                 onSelect={handleSelectDeletedTodo}
+                categories={categories}
               />
               {deletedHasMore && (
                 <div style={{ textAlign: 'center', marginTop: '20px' }}>

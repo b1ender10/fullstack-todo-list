@@ -85,6 +85,14 @@ export const validateId = [
   handleValidationErrors
 ];
 
+// Валидация categoryId в параметрах
+export const validateCategoryId = [
+  param('categoryId')
+    .isInt({ min: 1 })
+    .withMessage(config.messages.validation.idInvalid),
+  handleValidationErrors
+];
+
 export const validateBatchDelete = [
   body('ids')
     .isArray()
@@ -149,5 +157,28 @@ export const validateGetAllTodos = [
     .withMessage(config.messages.validation.emptyString)
     .isIn(['asc', 'desc'])
     .withMessage('sortOrder must be asc or desc'),
+  query('categoryId')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage(config.messages.validation.idInvalid)
+    .toInt(),
+  handleValidationErrors
+]
+
+export const validateCreateCategory = [
+  body('name')
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
+    .trim()
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyString)
+    .escape(),
+  body('color')
+    .isString()
+    .withMessage(config.messages.validation.invalidType)
+    .trim()
+    .notEmpty()
+    .withMessage(config.messages.validation.emptyString)
+    .escape(),
   handleValidationErrors
 ]

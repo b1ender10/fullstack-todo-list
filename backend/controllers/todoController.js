@@ -5,9 +5,9 @@ import TodoService from '../services/todoService.js';
 
 // GET /api/todos - получить все задачи
 export const getAllTodos = async (req, res, next) => {
-  const { completed, priority, page, limit, sortBy, sortOrder } = req.query;
+  const { completed, priority, page, limit, sortBy, sortOrder, categoryId } = req.query;
   try {
-    const result = await TodoService.getAllTodos({ completed, priority, page, limit, sortBy, sortOrder });
+    const result = await TodoService.getAllTodos({ completed, priority, page, limit, sortBy, sortOrder, categoryId });
     
     // Service всегда возвращает единый формат { data, pagination }
     res.json({
@@ -92,11 +92,11 @@ export const createTodo = async (req, res, next) => {
       });
     }
     
-    const todo = await TodoService.createTodo({ title, description, priority });
+    const todoId = await TodoService.createTodo({ title, description, priority });
 
     res.status(config.httpStatus.CREATED).json({
       success: true,
-      data: todo,
+      data: todoId,
       message: config.messages.todo.created
     });
   } catch (error) {
@@ -251,7 +251,6 @@ export const batchSoftDeleteRestoreTodos = async (req, res, next) => {
 
 export const searchTodos = async (req, res, next) => {
   try {
-
     const { q } = req.query;
     const todos = await TodoService.searchTodos(q);
 
@@ -261,6 +260,36 @@ export const searchTodos = async (req, res, next) => {
       message: config.messages.todo.search
     })
 
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const addCategoryToTodo = async (req, res, next) => {
+  try {
+    const { id, categoryId } = req.params;
+    const todo = await TodoService.addCategoryToTodo(id, categoryId);
+
+    res.json({
+      success: true,
+      data: todo,
+      message: config.messages.todo.categoryAdded
+    })
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const removeCategoryFromTodo = async (req, res, next) => {
+  try {
+    const { id, categoryId } = req.params;
+    const todo = await TodoService.removeCategoryFromTodo(id, categoryId);
+
+    res.json({
+      success: true,
+      data: todo,
+      message: config.messages.todo.categoryRemoved
+    })
   } catch (error) {
     next(error);
   }

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { initDatabase } from './config/database.js';
 import todoRoutes from './routes/todoRoutes.js';
+import categoriesRoutes from './routes/categoriesRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { config } from './config/constants.js';
 import logger from './utils/logger.js';
@@ -48,6 +49,7 @@ app.use((req, res, next) => {
 
 // Роуты
 app.use(config.apiBasePath, todoRoutes);
+app.use(config.apiBasePathCategories, categoriesRoutes);
 
 // Health check endpoint
 app.get(config.healthCheckPath, (req, res) => {

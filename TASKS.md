@@ -237,9 +237,13 @@ CREATE INDEX idx_priority ON todos(priority);
 - Создай таблицу `categories` (id, name, color)
 - Создай связь many-to-many между todos и categories
 - Endpoints:
-  - `GET /api/categories` - все категории
-  - `POST /api/todos/:id/categories` - добавить категорию к задаче
-  - `DELETE /api/todos/:id/categories/:categoryId` - удалить
+  -+ `GET /api/categories` - все категории
+  -+ `POST /api/todos/:id/categories` - добавить категорию к задаче
+  -+ `DELETE /api/todos/:id/categories/:categoryId` - удалить
+  -+ сделать фильтр в общем списке по категориям
+  -+ выводить категорию в выдаче всех задач и в задаче по айди
+  -+ удаление и создание категорий
+  -+ отладить
 
 **Подсказки:**
 - Создай промежуточную таблицу `todo_categories`

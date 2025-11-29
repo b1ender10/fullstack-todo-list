@@ -4,7 +4,7 @@ import logger from '../utils/logger.js';
 
 class TodoService {
 
-    static async getAllTodos({ completed, priority, page, limit, sortBy, sortOrder }) {
+    static async getAllTodos({ completed, priority, page, limit, sortBy, sortOrder, categoryId }) {
         const conditions = [];
         const values = [];
         conditions.push('deleted_at is NULL');
@@ -92,6 +92,10 @@ class TodoService {
             paginationValues.push((normalizedPage - 1) * normalizedLimit);
         }
 
+        const normalizedCategoryId = categoryId !== undefined && categoryId !== null && categoryId !== ''
+            ? Number(categoryId)
+            : null;
+
         // Вызов модели
         const result = await Todo.getAll({
             conditions: conditions,
@@ -100,6 +104,7 @@ class TodoService {
             paginationValues: paginationValues,
             hasPagination: hasPagination,
             sortCondition: sortCondition,
+            categoryId: normalizedCategoryId,
         });
 
         // Service всегда возвращает единый формат
@@ -172,6 +177,8 @@ class TodoService {
             paginationConditions: paginationConditions,
             paginationValues: paginationValues,
             hasPagination: hasPagination,
+            sortCondition: 'ORDER BY created_at DESC',
+            categoryId: null,
         });
 
         // Service всегда возвращает единый формат
@@ -253,15 +260,15 @@ class TodoService {
         }
 
         // Вызов модели
-        const todo = await Todo.create({ 
+        const todoId = await Todo.create({ 
             title: trimmedTitle, 
             description: normalizedDescription, 
             priority: normalizedPriority 
         });
+
+        logger.info('Todo created', { id: todoId});
         
-        logger.info('Todo created', { id: todo.id, title: todo.title, priority: todo.priority });
-        
-        return todo;
+        return todoId;
     }
 
     static async updateTodo(id, { title, description, completed, priority }) {
@@ -484,7 +491,54 @@ class TodoService {
         });
 
         return result;
-    
+   }
+
+   static async addCategoryToTodo(id, categoryId) {
+        // Нормализация и валидация ID
+        const normalizedId = Number(id);
+        const normalizedCategoryId = Number(categoryId);
+        
+        // Валидация: ID должен быть положительным числом
+        if (isNaN(normalizedId) || normalizedId < 1 || !Number.isInteger(normalizedId) || isNaN(normalizedCategoryId) || normalizedCategoryId < 1 || !Number.isInteger(normalizedCategoryId)) {
+            throw new Error('ID and categoryId must be a positive integer');
+        }
+
+        // Проверка существования задачи
+        const existingTodo = await Todo.getById(normalizedId);
+        if (!existingTodo) {
+            throw new Error('Todo not found');
+        }
+
+        // Вызов модели
+        const todo = await Todo.addCategoryToTodo(normalizedId, normalizedCategoryId);
+
+        logger.info('Category added to todo', { id: todo.id, categoryId: normalizedCategoryId });
+        
+        return todo;
+   }
+
+   static async removeCategoryFromTodo(id, categoryId) {
+        // Нормализация и валидация ID
+        const normalizedId = Number(id);
+        const normalizedCategoryId = Number(categoryId);
+        
+        // Валидация: ID должен быть положительным числом
+        if (isNaN(normalizedId) || normalizedId < 1 || !Number.isInteger(normalizedId) || isNaN(normalizedCategoryId) || normalizedCategoryId < 1 || !Number.isInteger(normalizedCategoryId)) {
+            throw new Error('ID and categoryId must be a positive integer');
+        }
+        
+        // Проверка существования задачи
+        const existingTodo = await Todo.getById(normalizedId);
+        if (!existingTodo) {
+            throw new Error('Todo not found');
+        }
+        
+        // Вызов модели
+        const todo = await Todo.removeCategoryFromTodo(normalizedId, normalizedCategoryId);
+
+        logger.info('Category removed from todo', { id: todo.id, categoryId: normalizedCategoryId });
+        
+        return todo;
    }
 }
 

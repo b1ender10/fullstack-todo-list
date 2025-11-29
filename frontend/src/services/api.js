@@ -1,5 +1,6 @@
 // API базовый URL
 const API_URL = 'http://localhost:3000/api/todos'
+const CATEGORIES_URL = 'http://localhost:3000/api/categories'
 
 // Вспомогательная функция для обработки ответов
 async function handleResponse(response) {
@@ -117,5 +118,27 @@ export async function searchTodos(query) {
   const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`)
   const result = await handleResponse(response)
   return result.data
+}
+
+// Получить все категории
+export async function getAllCategories() {
+  const response = await fetch(CATEGORIES_URL)
+  return handleResponse(response)
+}
+
+// Добавить категорию к задаче
+export async function addCategoryToTodo(todoId, categoryId) {
+  const response = await fetch(`${API_URL}/${todoId}/categories/${categoryId}`, {
+    method: 'POST'
+  })
+  return handleResponse(response)
+}
+
+// Удалить категорию у задачи
+export async function removeCategoryFromTodo(todoId, categoryId) {
+  const response = await fetch(`${API_URL}/${todoId}/categories/${categoryId}`, {
+    method: 'DELETE'
+  })
+  return handleResponse(response)
 }
 

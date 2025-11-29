@@ -9,12 +9,15 @@ import {
   batchSoftDeleteTodos,
   batchSoftDeleteRestoreTodos,
   getAllDeletedTodos,
-  searchTodos
+  searchTodos,
+  addCategoryToTodo,
+  removeCategoryFromTodo,
 } from '../controllers/todoController.js';
 import {
   validateCreateTodo,
   validateUpdateTodo,
   validateId,
+  validateCategoryId,
   validateBatchDelete,
   validateSearchTodos,
   validateGetAllTodos
@@ -37,11 +40,17 @@ router.get('/:id', validateId, getTodoById);
 // POST /api/todos - создать новую задачу
 router.post('/', validateCreateTodo, createTodo);
 
+// POST /api/todos/:id/categories/:categoryId - добавить категорию к задаче
+router.post('/:id/categories/:categoryId', validateId, validateCategoryId, addCategoryToTodo);
+
 // PUT /api/todos/batch/soft/restore - восстановить несколько задач (пометить) (должен быть ПЕРЕД /:id!)
 router.put('/batch/soft/restore', validateBatchDelete, batchSoftDeleteRestoreTodos);
 
 // PUT /api/todos/:id - обновить задачу
 router.put('/:id', validateUpdateTodo, updateTodo);
+
+// DELETE /api/todos/:id/categories/:categoryId - удалить категорию к задаче
+router.delete('/:id/categories/:categoryId', validateId, validateCategoryId, removeCategoryFromTodo);
 
 // DELETE /api/todos/batch/soft - удалить несколько задач (пометить) (должен быть ПЕРЕД /:id!)
 router.delete('/batch/soft', validateBatchDelete, batchSoftDeleteTodos);

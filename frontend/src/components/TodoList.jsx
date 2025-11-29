@@ -1,6 +1,6 @@
 import TodoItem from './TodoItem'
 
-function TodoList({ todos, selectedIds, onTodoUpdated, onEdit, onDelete, onSelect }) {
+function TodoList({ todos, selectedIds, onTodoUpdated, onEdit, onDelete, onSelect, categories = [] }) {
   if (todos.length === 0) {
     return (
       <div className="empty-state">
@@ -20,6 +20,7 @@ function TodoList({ todos, selectedIds, onTodoUpdated, onEdit, onDelete, onSelec
           onEdit={onEdit}
           onDelete={onDelete}
           onSelect={onSelect}
+          categories={categories}
         />
       ))}
     </ul>

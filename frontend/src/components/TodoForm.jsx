@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { createTodo, updateTodo } from '../services/api'
+import { createTodo, updateTodo, addCategoryToTodo, removeCategoryFromTodo } from '../services/api'
 
-function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel }) {
+function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel, categories = [] }) {
   const [priority, setPriority] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [categoryId, setCategoryId] = useState('')
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -14,6 +15,7 @@ function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel }) {
       setTitle(editingTodo.title)
       setDescription(editingTodo.description || '')
       setPriority(editingTodo.priority)
+      setCategoryId(editingTodo.category_id || '')
     } else {
       resetForm()
     }
@@ -24,6 +26,7 @@ function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel }) {
     setDescription('')
     setError(null)
     setPriority('')
+    setCategoryId('')
   }
 
   const handleSubmit = async (e) => {
@@ -36,22 +39,56 @@ function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel }) {
       return
     }
 
+    if (!categoryId) {
+      setError('Категория обязательна')
+      return
+    }
+
     setSubmitting(true)
 
     try {
       if (editingTodo) {
+        // Сначала обновляем саму задачу
         await updateTodo(editingTodo.id, {
           title: trimmedTitle,
           description: description.trim(),
           priority: Number(priority)
         })
+        
+        // Затем обновляем категорию через отдельный эндпоинт
+        const oldCategoryId = editingTodo.category_id
+        const newCategoryId = Number(categoryId)
+        
+        if (oldCategoryId && oldCategoryId !== newCategoryId) {
+          // Удаляем старую категорию и добавляем новую
+          await removeCategoryFromTodo(editingTodo.id, oldCategoryId)
+          await addCategoryToTodo(editingTodo.id, newCategoryId)
+        } else if (!oldCategoryId) {
+          // Если категории не было, просто добавляем
+          await addCategoryToTodo(editingTodo.id, newCategoryId)
+        }
+        
         onTodoUpdated()
       } else {
-        await createTodo({
+        // Сначала создаем задачу
+        const result = await createTodo({
           title: trimmedTitle,
           description: description.trim(),
           priority: Number(priority)
         })
+        
+        // Получаем ID созданной задачи из ответа
+        const todoId = result?.data
+        
+        if (!todoId) {
+          console.error('Не удалось получить ID созданной задачи. Структура ответа:', result)
+          setError('Задача создана, но не удалось добавить категорию')
+          setSubmitting(false)
+          return
+        }
+        
+        // Добавляем категорию через отдельный эндпоинт
+        await addCategoryToTodo(todoId, Number(categoryId))
         onTodoCreated()
       }
       resetForm()
@@ -75,6 +112,17 @@ function TodoForm({ editingTodo, onTodoCreated, onTodoUpdated, onCancel }) {
           <option value="1">Низкий</option>
           <option value="2">Средний</option>
           <option value="3">Высокий</option>
+        </select>
+        <select 
+          value={categoryId} 
+          onChange={(e) => setCategoryId(e.target.value)}
+          required
+          disabled={submitting}
+        >
+          <option value="">Выберите категорию *</option>
+          {Array.isArray(categories) && categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
         </select>
         <input
           type="text"

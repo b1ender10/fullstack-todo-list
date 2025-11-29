@@ -4,16 +4,69 @@ import { config } from '../config/constants.js';
 // Модель Todo - содержит методы для работы с данными
 export class Todo {
   // Получить все задачи
-  static async getAll({ conditions, values, paginationConditions, paginationValues, hasPagination, sortCondition }) {
+  static async getAll({ conditions, values, paginationConditions, paginationValues, hasPagination, sortCondition, categoryId }) {
+    // Используем LEFT JOIN для получения всех задач, даже без категорий
+    // Если фильтр по категории задан, используем INNER JOIN для фильтрации
+    const joinClause = categoryId !== null 
+      ? `INNER JOIN todos_categories ON todos.id = todos_categories.todo_id`
+      : `LEFT JOIN todos_categories ON todos.id = todos_categories.todo_id`;
+    
+    if (categoryId !== null) {
+      conditions.push('todos_categories.category_id = ?');
+      values.push(categoryId);
+    }
+    
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const paginationClause = paginationConditions.length > 0 ? ` ${paginationConditions.join(' ')}` : '';
-    const query = `SELECT * FROM todos ${whereClause} ${sortCondition} ${paginationClause}`;
-    const todos = await db.all(query, [...values, ...paginationValues]);
     
-    // Преобразование данных (boolean для completed)
+    // Получаем задачи
+    const query = `
+      SELECT 
+        todos.*
+      FROM todos 
+      ${joinClause}
+      ${whereClause}
+      GROUP BY todos.id
+      ${sortCondition}
+      ${paginationClause}
+    `;
+    const todos = await db.all(query, [...values, ...paginationValues]);
+
+    // Получаем категории для всех задач
+    const todoIds = todos.map(t => t.id);
+    let categoriesMap = {};
+    if (todoIds.length > 0) {
+      const placeholders = todoIds.map(() => '?').join(',');
+      const categoriesQuery = `
+        SELECT 
+          todos_categories.todo_id,
+          categories.id,
+          categories.name,
+          categories.color
+        FROM todos_categories
+        INNER JOIN categories ON todos_categories.category_id = categories.id
+        WHERE todos_categories.todo_id IN (${placeholders})
+      `;
+      const categories = await db.all(categoriesQuery, todoIds);
+      
+      // Группируем категории по todo_id
+      categories.forEach(cat => {
+        if (!categoriesMap[cat.todo_id]) {
+          categoriesMap[cat.todo_id] = [];
+        }
+        categoriesMap[cat.todo_id].push({
+          id: cat.id,
+          name: cat.name,
+          color: cat.color
+        });
+      });
+    }
+
+    // Преобразование данных (boolean для completed, добавляем категории)
     const todosResponse = todos.map(todo => ({
       ...todo,
-      completed: Boolean(todo.completed) // SQLite хранит boolean как 0/1
+      completed: Boolean(todo.completed),
+      categories: categoriesMap[todo.id] || []
     }));
 
     // Если пагинация не запрашивалась, возвращаем просто массив
@@ -22,7 +75,10 @@ export class Todo {
     }
 
     // Если пагинация запрашивалась, возвращаем объект с data и total
-    const queryTotalCount = `SELECT COUNT(*) as count FROM todos ${whereClause}`;
+    const countJoinClause = categoryId !== null 
+      ? `INNER JOIN todos_categories ON todos.id = todos_categories.todo_id`
+      : `LEFT JOIN todos_categories ON todos.id = todos_categories.todo_id`;
+    const queryTotalCount = `SELECT COUNT(DISTINCT todos.id) as count FROM todos ${countJoinClause} ${whereClause}`;
     const totalCount = await db.get(queryTotalCount, values);
 
     return {
@@ -35,11 +91,29 @@ export class Todo {
 
   // Получить задачу по ID
   static async getById(id) {
-    const todo = await db.get('SELECT * FROM todos WHERE id = ? AND deleted_at IS NULL', [id]);
+    const todo = await db.get(`SELECT * FROM todos WHERE todos.id = ? AND todos.deleted_at IS NULL`, [id]);
     if (!todo) return null;
+    
+    // Получаем категории для задачи
+    const categoriesQuery = `
+      SELECT 
+        categories.id,
+        categories.name,
+        categories.color
+      FROM todos_categories
+      INNER JOIN categories ON todos_categories.category_id = categories.id
+      WHERE todos_categories.todo_id = ?
+    `;
+    const categories = await db.all(categoriesQuery, [id]);
+    
     return {
       ...todo,
-      completed: Boolean(todo.completed)
+      completed: Boolean(todo.completed),
+      categories: categories.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        color: cat.color
+      }))
     };
   }
 
@@ -49,7 +123,7 @@ export class Todo {
       'INSERT INTO todos (title, description, priority) VALUES (?, ?, ?)',
       [title, description, priority]
     );
-    return this.getById(result.lastID);
+    return result.lastID;
   }
 
   // Обновить задачу
@@ -222,17 +296,61 @@ export class Todo {
   }
 
   static async searchTodos(q) {
-    const whereClause = `WHERE (title LIKE ? OR description LIKE ?) AND deleted_at IS NULL`;
-    const query = `SELECT * FROM todos ${whereClause} ORDER BY created_at DESC`;
+    const whereClause = `WHERE (todos.title LIKE ? OR todos.description LIKE ?) AND todos.deleted_at IS NULL`;
+    const query = `SELECT * FROM todos ${whereClause} ORDER BY todos.created_at DESC`;
     const todos = await db.all(query, [`%${q.q}%`, `%${q.q}%`]);
     
-    // Преобразование данных (boolean для completed)
+    // Получаем категории для всех найденных задач
+    const todoIds = todos.map(t => t.id);
+    let categoriesMap = {};
+    if (todoIds.length > 0) {
+      const placeholders = todoIds.map(() => '?').join(',');
+      const categoriesQuery = `
+        SELECT 
+          todos_categories.todo_id,
+          categories.id,
+          categories.name,
+          categories.color
+        FROM todos_categories
+        INNER JOIN categories ON todos_categories.category_id = categories.id
+        WHERE todos_categories.todo_id IN (${placeholders})
+      `;
+      const categories = await db.all(categoriesQuery, todoIds);
+      
+      categories.forEach(cat => {
+        if (!categoriesMap[cat.todo_id]) {
+          categoriesMap[cat.todo_id] = [];
+        }
+        categoriesMap[cat.todo_id].push({
+          id: cat.id,
+          name: cat.name,
+          color: cat.color
+        });
+      });
+    }
+    
+    // Преобразование данных (boolean для completed, добавляем категории)
     const todosResponse = todos.map(todo => ({
       ...todo,
-      completed: Boolean(todo.completed) // SQLite хранит boolean как 0/1
+      completed: Boolean(todo.completed),
+      categories: categoriesMap[todo.id] || []
     }));
 
     return todosResponse;
+  }
+
+  static async addCategoryToTodo(id, categoryId) {
+    const query = 'INSERT INTO todos_categories (todo_id, category_id) VALUES (?, ?) ON CONFLICT DO NOTHING';
+    await db.run(query, [id, categoryId]);
+    // Возвращаем обновленную задачу с категориями
+    return this.getById(id);
+  }
+
+  static async removeCategoryFromTodo(id, categoryId) {
+    const query = 'DELETE FROM todos_categories WHERE todo_id = ? AND category_id = ?';
+    await db.run(query, [id, categoryId]);
+    // Возвращаем обновленную задачу с категориями
+    return this.getById(id);
   }
 }
 
