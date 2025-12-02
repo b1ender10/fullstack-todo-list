@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { initDatabase } from './config/database.js';
 import todoRoutes from './routes/todoRoutes.js';
 import categoriesRoutes from './routes/categoriesRoutes.js';
@@ -79,5 +81,13 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Запускаем сервер только если файл запущен напрямую, а не импортирован
+const __filename = fileURLToPath(import.meta.url);
+const isMainModule = process.argv[1] && resolve(process.argv[1]) === resolve(__filename);
+
+if (isMainModule) {
+  startServer();
+}
+
+export default app;
 
