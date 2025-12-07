@@ -22,7 +22,6 @@ import {
   validateSearchTodos,
   validateGetAllTodos
 } from '../middleware/validator.js';
-
 const router = express.Router();
 
 // GET /api/todos/deleted - получить все удаленные задачи

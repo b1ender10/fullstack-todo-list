@@ -2,12 +2,14 @@ import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Создаем подключение к базе данных
-const dbPath = join(__dirname, '..', 'todos.db');
+const dbPath = join(__dirname, '..', process.env.DB_PATH);
 const db = new sqlite3.Database(dbPath);
 
 // Сохраняем оригинальный метод run

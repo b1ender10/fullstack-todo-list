@@ -1,5 +1,7 @@
 import { config } from '../config/constants.js';
 import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Middleware для обработки ошибок
 export const errorHandler = (err, req, res, next) => {

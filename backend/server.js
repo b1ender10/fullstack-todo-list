@@ -9,10 +9,11 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { config } from './config/constants.js';
 import logger from './utils/logger.js';
 import { rateLimit } from 'express-rate-limit'
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || config.defaultPort;
-
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
