@@ -12,6 +12,109 @@ import { rateLimit } from 'express-rate-limit'
 import dotenv from 'dotenv';
 import { db } from './config/database.js';
 
+import swaggerJsdoc from 'swagger-jsdoc';
+import { dirname, join } from 'path';
+
+const swaggerDirname = dirname(fileURLToPath(import.meta.url));
+
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Todo CRUD API',
+      version: '1.0.0',
+      description: 'REST API для управления задачами (todos)',
+      license: {
+        name: 'Licensed Under MIT',
+        url: 'https://spdx.org/licenses/MIT.html',
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Development server',
+      },
+    ],
+    components: {
+      schemas: {
+        Todo: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'integer',
+              description: 'ID задачи'
+            },
+            title: {
+              type: 'string',
+              description: 'Название задачи',
+              minLength: 1,
+              maxLength: 200
+            },
+            description: {
+              type: 'string',
+              description: 'Описание задачи',
+              maxLength: 1000
+            },
+            completed: {
+              type: 'boolean',
+              description: 'Статус выполнения'
+            },
+            priority: {
+              type: 'integer',
+              enum: [1, 2, 3],
+              description: 'Приоритет (1-низкий, 2-средний, 3-высокий)'
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Дата создания'
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Дата обновления'
+            },
+            deleted_at: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: 'Дата удаления (для soft delete)'
+            },
+            categories: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Category'
+              },
+              description: 'Список категорий задачи'
+            }
+          }
+        },
+        Category: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'integer',
+              description: 'ID категории'
+            },
+            name: {
+              type: 'string',
+              description: 'Название категории'
+            },
+            color: {
+              type: 'string',
+              description: 'Цвет категории'
+            }
+          }
+        }
+      }
+    }
+  },
+  apis: [join(swaggerDirname, './routes/*.js')], // files containing annotations
+};
+
+const openapiSpecification = swaggerJsdoc(options);
+
+
 dotenv.config();
 
 const app = express();
@@ -47,6 +150,14 @@ app.use(limiter);
 app.use(cors()); // Разрешаем запросы с фронтенда
 app.use(express.json()); // Парсим JSON в теле запроса
 app.use(express.urlencoded({ extended: true })); // Парсим URL-encoded данные
+
+
+import swaggerUi from 'swagger-ui-express';
+// import swaggerDocument from './swagger.json';
+
+console.log(openapiSpecification);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification));
 
 // Логирование HTTP запросов и сбор метрик
 app.use((req, res, next) => {
